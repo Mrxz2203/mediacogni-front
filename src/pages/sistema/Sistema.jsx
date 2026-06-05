@@ -109,7 +109,7 @@ const REQS = [
 ]
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '720px' },
+  container: { display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '720px', margin: '0 auto', width: '100%', },
   tag: {
     display: 'inline-block', fontFamily: 'var(--mono)', fontSize: '11px',
     color: 'var(--accent)', background: 'var(--accent-dim)',

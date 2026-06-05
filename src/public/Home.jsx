@@ -1,33 +1,45 @@
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function Home() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   return (
     <div style={styles.container}>
-      <div style={styles.welcome}>
-        <div style={styles.tag}>V-COGNI · v1.0</div>
-        <h2 style={styles.title}>Bienvenido al sistema</h2>
-        <p style={styles.desc}>
-          V-COGNI identifica tu estilo cognitivo (visual o verbal) mediante
-          seguimiento ocular en tiempo real. El proceso dura 90 segundos
-          y usa tu cámara web estándar.
-        </p>
-        <button style={styles.btn} onClick={() => navigate('/sistema')}>
-          Ir al sistema
-          <ArrowIcon />
-        </button>
+
+      {/* Card de bienvenida centrada */}
+      <div style={styles.centered}>
+        <div style={styles.welcome}>
+          <div style={styles.tag}>V-COGNI</div>
+          <h2 style={styles.title}>
+            Bienvenido, {user?.nombre?.split(' ')[0] ?? 'estudiante'} 👋
+          </h2>
+          <p style={styles.desc}>
+            V-COGNI identifica tu estilo cognitivo (visual o verbal) mediante
+            seguimiento ocular en tiempo real. El proceso dura 90 segundos
+            y usa tu cámara web estándar.
+          </p>
+          <button style={styles.btn} onClick={() => navigate('/sistema')}>
+            Ir al sistema
+            <ArrowIcon />
+          </button>
+        </div>
       </div>
 
-      <div style={styles.cards}>
-        {CARDS.map(c => (
-          <div key={c.label} style={styles.card}>
-            <div style={styles.cardIcon}>{c.icon}</div>
-            <div style={styles.cardLabel}>{c.label}</div>
-            <div style={styles.cardDesc}>{c.desc}</div>
-          </div>
-        ))}
+      {/* Cards informativas centradas */}
+      <div style={styles.cardsWrap}>
+        <div style={styles.cards}>
+          {CARDS.map(c => (
+            <div key={c.label} style={styles.card}>
+              <div style={styles.cardIcon}>{c.icon}</div>
+              <div style={styles.cardLabel}>{c.label}</div>
+              <div style={styles.cardDesc}>{c.desc}</div>
+            </div>
+          ))}
+        </div>
       </div>
+
     </div>
   )
 }
@@ -47,12 +59,24 @@ function ArrowIcon() {
 }
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'column', gap: '40px' },
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '32px',
+    alignItems: 'center',
+    width: '100%',
+  },
+  centered: {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+  },
   welcome: {
     background: 'var(--surface)',
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-lg)',
     padding: '40px',
+    width: '100%',
     maxWidth: '600px',
   },
   tag: {
@@ -67,8 +91,18 @@ const styles = {
     marginBottom: '16px',
     letterSpacing: '0.08em',
   },
-  title: { fontSize: '26px', fontWeight: 600, marginBottom: '12px', letterSpacing: '-0.02em' },
-  desc: { color: 'var(--muted2)', lineHeight: 1.7, marginBottom: '28px', fontSize: '14px' },
+  title: {
+    fontSize: '26px',
+    fontWeight: 600,
+    marginBottom: '12px',
+    letterSpacing: '-0.02em',
+  },
+  desc: {
+    color: 'var(--muted2)',
+    lineHeight: 1.7,
+    marginBottom: '28px',
+    fontSize: '14px',
+  },
   btn: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -80,9 +114,20 @@ const styles = {
     fontSize: '14px',
     fontWeight: 600,
     fontFamily: 'var(--sans)',
-    transition: 'opacity 0.15s',
+    cursor: 'pointer',
   },
-  cards: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' },
+  cardsWrap: {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  cards: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '16px',
+    width: '100%',
+    maxWidth: '600px',
+  },
   card: {
     background: 'var(--surface)',
     border: '1px solid var(--border)',

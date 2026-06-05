@@ -7,24 +7,39 @@ import { useAuth } from '../context/AuthContext'
 export default function LoginPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ codigo: '', contrasena: '' })
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  const { login } = useAuth()
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value })
+  const handleChange = e => {
+    setForm({ ...form, [e.target.name]: e.target.value })
+    setErrors({ ...errors, [e.target.name]: '', general: '' })
+  }
 
- const { login } = useAuth()
+  const validate = () => {
+    const e = {}
+    if (!form.codigo.trim())     e.codigo    = 'El código institucional es obligatorio.'
+    if (!form.contrasena.trim()) e.contrasena = 'La contraseña es obligatoria.'
+    return e
+  }
 
-const handleSubmit = async (e) => {
-  e.preventDefault()
-  try {
-    const rol = await login(form.codigo, form.contrasena)
-    navigate('/inicio')
-  } catch { setError('Código o contraseña incorrectos') }
-}
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    const errs = validate()
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    setLoading(true)
+    try {
+      await login(form.codigo, form.contrasena)
+      navigate('/inicio')
+    } catch {
+      setErrors({ general: 'Código o contraseña incorrectos.' })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div style={s.root}>
-
-      {/* Navbar */}
       <nav style={s.nav}>
         <img src={cogni} alt="V-COGNI" style={s.logoImg} onClick={() => navigate('/')} />
         <div style={s.navBtns}>
@@ -33,17 +48,13 @@ const handleSubmit = async (e) => {
         </div>
       </nav>
 
-      {/* Contenido */}
       <div style={s.body}>
-
-        {/* Izquierda */}
         <div style={s.left}>
           <h2 style={s.leftTitle}>¡Inicia sesión para</h2>
           <h2 style={{ ...s.leftTitle, color: 'var(--accent)', marginBottom: 40 }}>empezar a explorar!</h2>
           <img src={loginImg} alt="Login" style={s.illustration} />
         </div>
 
-        {/* Derecha — formulario */}
         <div style={s.right}>
           <div style={s.card}>
             <div style={s.cardHeader}>
@@ -58,20 +69,42 @@ const handleSubmit = async (e) => {
               </div>
             </div>
 
+            {errors.general && (
+              <div style={s.alertError}>
+                <span>⚠</span>
+                <span>{errors.general}</span>
+              </div>
+            )}
+
             <div style={s.formWrap}>
               <div style={s.field}>
                 <label style={s.label}>Código institucional</label>
-                <input name="codigo" value={form.codigo} onChange={handleChange} placeholder="U20XXXXXXX" style={s.input} />
+                <input
+                  name="codigo" value={form.codigo} onChange={handleChange}
+                  placeholder="U20XXXXXXX"
+                  style={{ ...s.input, ...(errors.codigo ? s.inputError : {}) }}
+                />
+                {errors.codigo && <div style={s.errorMsg}>{errors.codigo}</div>}
               </div>
+
               <div style={s.field}>
                 <label style={s.label}>Contraseña</label>
-                <input name="contrasena" type="password" value={form.contrasena} onChange={handleChange} placeholder="••••••••" style={s.input} />
+                <input
+                  name="contrasena" type="password" value={form.contrasena} onChange={handleChange}
+                  placeholder="••••••••"
+                  style={{ ...s.input, ...(errors.contrasena ? s.inputError : {}) }}
+                />
+                {errors.contrasena && <div style={s.errorMsg}>{errors.contrasena}</div>}
               </div>
 
-              {error && <div style={s.error}>{error}</div>}
-
               <div style={s.btnRow}>
-                <button onClick={handleSubmit} style={s.btnPrimary}>Iniciar sesión</button>
+                <button
+                  onClick={handleSubmit}
+                  style={{ ...s.btnPrimary, opacity: loading ? 0.7 : 1 }}
+                  disabled={loading}
+                >
+                  {loading ? 'Ingresando...' : 'Iniciar sesión'}
+                </button>
                 <button onClick={() => navigate('/')} style={s.btnCancel}>Cancelar</button>
               </div>
 
@@ -104,15 +137,17 @@ const s = {
   illustration: { width: '300px', objectFit: 'contain', marginTop: '32px' },
   right: { flex: 1, display: 'flex', justifyContent: 'center' },
   card: { width: '100%', maxWidth: '400px', background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: '20px', padding: '32px' },
-  cardHeader: { display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '28px' },
+  cardHeader: { display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' },
   cardIcon: { width: '44px', height: '44px', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   cardTitle: { fontSize: '16px', fontWeight: 600, marginBottom: '2px' },
   cardSub: { fontSize: '12px', color: 'var(--muted)' },
+  alertError: { display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--danger)', marginBottom: '16px' },
   formWrap: { display: 'flex', flexDirection: 'column', gap: '14px' },
   field: { display: 'flex', flexDirection: 'column', gap: '6px' },
   label: { fontSize: '12px', fontFamily: 'var(--mono)', color: 'var(--muted)', letterSpacing: '0.05em' },
   input: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text)', fontFamily: 'var(--sans)', outline: 'none', width: '100%' },
-  error: { background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: 'var(--danger)' },
+  inputError: { border: '1px solid var(--danger)', background: 'rgba(244,63,94,0.05)' },
+  errorMsg: { fontSize: '11px', color: 'var(--danger)' },
   btnRow: { display: 'flex', gap: '12px', marginTop: '4px' },
   btnCancel: { flex: 1, padding: '10px', background: 'none', border: '1px solid var(--border2)', borderRadius: '8px', color: 'var(--muted2)', fontSize: '14px', fontFamily: 'var(--sans)', cursor: 'pointer' },
   hint: { textAlign: 'center', fontSize: '12px', color: 'var(--muted)' },

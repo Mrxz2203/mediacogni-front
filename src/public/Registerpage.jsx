@@ -8,19 +8,44 @@ export default function RegisterPage() {
   const navigate = useNavigate()
   const [rol, setRol] = useState('estudiante')
   const [form, setForm] = useState({ nombre: '', codigo: '', contrasena: '', carrera: '' })
+  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  const { registro } = useAuth()
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value })
+  const handleChange = e => {
+    setForm({ ...form, [e.target.name]: e.target.value })
+    setErrors({ ...errors, [e.target.name]: '', general: '' })
+  }
 
- const { registro } = useAuth()
+  const validate = () => {
+    const e = {}
+    if (!form.nombre.trim())
+      e.nombre = 'El nombre es obligatorio.'
+    if (!form.codigo.trim())
+      e.codigo = 'El código institucional es obligatorio.'
+    if (!form.contrasena.trim())
+      e.contrasena = 'La contraseña es obligatoria.'
+    else if (form.contrasena.length < 6)
+      e.contrasena = 'Mínimo 6 caracteres.'
+    if (rol === 'estudiante' && !form.carrera)
+      e.carrera = 'Selecciona una carrera.'
+    return e
+  }
 
-const handleSubmit = async (e) => {
-  e.preventDefault()
-  try {
-    await registro({ nombre: form.nombre, codigo: form.codigo, password: form.contrasena, rol, carrera: form.carrera })
-    alert('Registro exitoso. Ahora inicia sesión.')
-    navigate('/login')
-  } catch { alert('Error. El código ya puede estar en uso.') }
-}
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    const errs = validate()
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    setLoading(true)
+    try {
+      await registro({ nombre: form.nombre, codigo: form.codigo, password: form.contrasena, rol, carrera: form.carrera })
+      navigate('/login')
+    } catch {
+      setErrors({ general: 'Error al registrar. El código ya puede estar en uso.' })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div style={s.root}>
@@ -48,6 +73,14 @@ const handleSubmit = async (e) => {
         <div style={s.right}>
           <div style={s.card}>
 
+            {/* Error general */}
+            {errors.general && (
+              <div style={s.alertError}>
+                <span>⚠</span>
+                <span>{errors.general}</span>
+              </div>
+            )}
+
             {/* Selector de rol */}
             <div style={s.rolRow}>
               {['estudiante', 'docente'].map(r => (
@@ -64,22 +97,44 @@ const handleSubmit = async (e) => {
 
             {/* Form */}
             <div style={s.formWrap}>
+
               <div style={s.field}>
                 <label style={s.label}>Nombre completo</label>
-                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Tu nombre" style={s.input} />
+                <input
+                  name="nombre" value={form.nombre} onChange={handleChange}
+                  placeholder="Tu nombre"
+                  style={{ ...s.input, ...(errors.nombre ? s.inputError : {}) }}
+                />
+                {errors.nombre && <div style={s.errorMsg}>{errors.nombre}</div>}
               </div>
+
               <div style={s.field}>
                 <label style={s.label}>Código institucional</label>
-                <input name="codigo" value={form.codigo} onChange={handleChange} placeholder="U20XXXXXXX" style={s.input} />
+                <input
+                  name="codigo" value={form.codigo} onChange={handleChange}
+                  placeholder="U20XXXXXXX"
+                  style={{ ...s.input, ...(errors.codigo ? s.inputError : {}) }}
+                />
+                {errors.codigo && <div style={s.errorMsg}>{errors.codigo}</div>}
               </div>
+
               <div style={s.field}>
                 <label style={s.label}>Contraseña</label>
-                <input name="contrasena" type="password" value={form.contrasena} onChange={handleChange} placeholder="••••••••" style={s.input} />
+                <input
+                  name="contrasena" type="password" value={form.contrasena} onChange={handleChange}
+                  placeholder="••••••••"
+                  style={{ ...s.input, ...(errors.contrasena ? s.inputError : {}) }}
+                />
+                {errors.contrasena && <div style={s.errorMsg}>{errors.contrasena}</div>}
               </div>
+
               {rol === 'estudiante' && (
                 <div style={s.field}>
                   <label style={s.label}>Carrera</label>
-                  <select name="carrera" value={form.carrera} onChange={handleChange} style={s.input}>
+                  <select
+                    name="carrera" value={form.carrera} onChange={handleChange}
+                    style={{ ...s.input, ...(errors.carrera ? s.inputError : {}) }}
+                  >
                     <option value="">Selecciona tu carrera</option>
                     <option value="ingenieria_sistemas">Ingeniería de Sistemas</option>
                     <option value="ingenieria_industrial">Ingeniería Industrial</option>
@@ -89,11 +144,18 @@ const handleSubmit = async (e) => {
                     <option value="medicina">Medicina</option>
                     <option value="otra">Otra</option>
                   </select>
+                  {errors.carrera && <div style={s.errorMsg}>{errors.carrera}</div>}
                 </div>
               )}
 
               <div style={s.btnRow}>
-                <button onClick={handleSubmit} style={s.btnPrimary}>Registrar</button>
+                <button
+                  onClick={handleSubmit}
+                  style={{ ...s.btnPrimary, opacity: loading ? 0.7 : 1 }}
+                  disabled={loading}
+                >
+                  {loading ? 'Registrando...' : 'Registrar'}
+                </button>
                 <button onClick={() => navigate('/')} style={s.btnCancel}>Cancelar</button>
               </div>
 
@@ -126,12 +188,15 @@ const s = {
   illustration: { width: '280px', objectFit: 'contain', marginTop: '32px' },
   right: { flex: 1, display: 'flex', justifyContent: 'center' },
   card: { width: '100%', maxWidth: '420px', background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: '20px', padding: '32px' },
+  alertError: { display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--danger)', marginBottom: '16px' },
   rolRow: { display: 'flex', gap: '12px', marginBottom: '24px' },
   rolBtn: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '14px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s' },
   formWrap: { display: 'flex', flexDirection: 'column', gap: '14px' },
   field: { display: 'flex', flexDirection: 'column', gap: '6px' },
   label: { fontSize: '12px', fontFamily: 'var(--mono)', color: 'var(--muted)', letterSpacing: '0.05em' },
   input: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'var(--text)', fontFamily: 'var(--sans)', outline: 'none', width: '100%' },
+  inputError: { border: '1px solid var(--danger)', background: 'rgba(244,63,94,0.05)' },
+  errorMsg: { fontSize: '11px', color: 'var(--danger)' },
   btnRow: { display: 'flex', gap: '12px', marginTop: '4px' },
   btnCancel: { flex: 1, padding: '10px', background: 'none', border: '1px solid var(--border2)', borderRadius: '8px', color: 'var(--muted2)', fontSize: '14px', fontFamily: 'var(--sans)', cursor: 'pointer' },
   hint: { textAlign: 'center', fontSize: '12px', color: 'var(--muted)' },

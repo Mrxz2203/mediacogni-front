@@ -72,7 +72,7 @@ export default function Profile() {
 
       if (!res.ok) throw new Error('Error al actualizar')
 
-      // Actualizar localStorage
+      
       const updated = { ...user, nombre: form.nombre, carrera: form.carrera }
       localStorage.setItem('vcogni_user', JSON.stringify(updated))
 
@@ -228,7 +228,8 @@ function EditIcon() {
 }
 
 const s = {
-  container: { display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px' },
+  container: { display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px', margin: '0 auto',   // ← agrega esta línea
+  width: '100%',  },
   alertSuccess: { display: 'flex', alignItems: 'flex-start', gap: '14px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '10px', padding: '16px 20px' },
   alertError: { display: 'flex', alignItems: 'flex-start', gap: '14px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '10px', padding: '16px 20px' },
   alertIcon: { fontSize: '18px', marginTop: '1px' },

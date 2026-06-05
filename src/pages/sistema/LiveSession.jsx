@@ -19,7 +19,7 @@ export default function LiveSession() {
   const [timeLeft,   setTimeLeft]   = useState(TOTAL)
   const [gazeData,   setGazeData]   = useState(null)
   const [showCancel, setShowCancel] = useState(false)
-  const [phase,      setPhase]      = useState('running') // running | classifying | done | error
+  const [phase,      setPhase]      = useState('running') 
   const [resultado,  setResultado]  = useState(null)
   const [activePara, setActivePara] = useState(0)
   const metricsRef = useRef([])
