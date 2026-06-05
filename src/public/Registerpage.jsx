@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import cogni from '../assets/cogni.png'
 import registerImg from '../assets/Register.png'
+import estudianteImg from '../assets/estudiante.png'
+import docenteImg from '../assets/docente.png'
 import { useAuth } from '../context/AuthContext'
 
 export default function RegisterPage() {
@@ -83,14 +85,24 @@ export default function RegisterPage() {
 
             {/* Selector de rol */}
             <div style={s.rolRow}>
-              {['estudiante', 'docente'].map(r => (
-                <button key={r} onClick={() => setRol(r)} style={{
+              {[
+                { key: 'estudiante', img: estudianteImg },
+                { key: 'docente',    img: docenteImg    },
+              ].map(({ key, img }) => (
+                <button key={key} onClick={() => setRol(key)} style={{
                   ...s.rolBtn,
-                  border: rol === r ? '2px solid var(--accent)' : '2px solid var(--border2)',
-                  background: rol === r ? 'var(--accent-dim)' : 'var(--surface2)',
+                  border: rol === key ? '2px solid var(--accent)' : '2px solid var(--border2)',
+                  background: rol === key ? 'var(--accent-dim)' : 'var(--surface2)',
                 }}>
-                  <span style={{ fontSize: 22 }}>{r === 'estudiante' ? '🎓' : '📋'}</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: rol === r ? 'var(--accent)' : 'var(--muted2)', textTransform: 'capitalize' }}>{r}</span>
+                  <img src={img} alt={key} style={s.rolImg} />
+                  <span style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: rol === key ? 'var(--accent)' : 'var(--muted2)',
+                    textTransform: 'capitalize'
+                  }}>
+                    {key}
+                  </span>
                 </button>
               ))}
             </div>
@@ -191,6 +203,7 @@ const s = {
   alertError: { display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--danger)', marginBottom: '16px' },
   rolRow: { display: 'flex', gap: '12px', marginBottom: '24px' },
   rolBtn: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '14px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s' },
+  rolImg: { width: '48px', height: '48px', objectFit: 'contain' },
   formWrap: { display: 'flex', flexDirection: 'column', gap: '14px' },
   field: { display: 'flex', flexDirection: 'column', gap: '6px' },
   label: { fontSize: '12px', fontFamily: 'var(--mono)', color: 'var(--muted)', letterSpacing: '0.05em' },

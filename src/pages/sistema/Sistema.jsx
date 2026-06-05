@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import iluminarImg from '../../assets/iluminar.png'
+import camaraImg   from '../../assets/camara.png'
+import pythonImg   from '../../assets/python.png'
 
 export default function Sistema() {
   const [showModal, setShowModal] = useState(false)
@@ -51,7 +54,7 @@ export default function Sistema() {
         <div style={styles.reqRow}>
           {REQS.map(r => (
             <div key={r.label} style={styles.reqCard}>
-              <span style={styles.reqIcon}>{r.icon}</span>
+              <img src={r.img} alt={r.label} style={styles.reqImg} />
               <div>
                 <div style={styles.reqLabel}>{r.label}</div>
                 <div style={styles.reqDesc}>{r.desc}</div>
@@ -103,13 +106,13 @@ const STEPS = [
 ]
 
 const REQS = [
-  { icon: '📷', label: 'Cámara web', desc: 'Cualquier webcam estándar' },
-  { icon: '💡', label: 'Buena iluminación', desc: 'Evita contraluz directa' },
-  { icon: '🖥', label: 'Python corriendo', desc: 'eye_coordinates_cam.py activo' },
+  { img: camaraImg,   label: 'Cámara web',        desc: 'Cualquier webcam estándar' },
+  { img: iluminarImg, label: 'Buena iluminación',  desc: 'Evita contraluz directa' },
+  { img: pythonImg,   label: 'Python corriendo',   desc: 'eye_coordinates_cam.py activo' },
 ]
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '720px', margin: '0 auto', width: '100%', },
+  container: { display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '720px', margin: '0 auto', width: '100%' },
   tag: {
     display: 'inline-block', fontFamily: 'var(--mono)', fontSize: '11px',
     color: 'var(--accent)', background: 'var(--accent-dim)',
@@ -142,7 +145,7 @@ const styles = {
     display: 'inline-flex', alignItems: 'center',
     background: 'var(--accent)', color: '#020c08',
     border: 'none', borderRadius: '8px', padding: '12px 24px',
-    fontSize: '14px', fontWeight: 600, fontFamily: 'var(--sans)',
+    fontSize: '14px', fontWeight: 600, fontFamily: 'var(--sans)', cursor: 'pointer',
   },
   reqRow: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' },
   reqCard: {
@@ -150,7 +153,7 @@ const styles = {
     borderRadius: 'var(--radius)', padding: '16px 18px',
     display: 'flex', alignItems: 'flex-start', gap: '12px',
   },
-  reqIcon: { fontSize: '20px', flexShrink: 0 },
+  reqImg: { width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 },
   reqLabel: { fontSize: '13px', fontWeight: 500, marginBottom: '2px' },
   reqDesc: { fontSize: '11px', color: 'var(--muted)' },
   /* Modal */
@@ -181,11 +184,11 @@ const styles = {
   cancelBtn: {
     flex: 1, padding: '10px', background: 'none',
     border: '1px solid var(--border2)', borderRadius: '8px',
-    color: 'var(--muted2)', fontSize: '14px', fontFamily: 'var(--sans)',
+    color: 'var(--muted2)', fontSize: '14px', fontFamily: 'var(--sans)', cursor: 'pointer',
   },
   confirmBtn: {
     flex: 1, padding: '10px', background: 'var(--accent)',
     border: 'none', borderRadius: '8px', color: '#020c08',
-    fontSize: '14px', fontWeight: 600, fontFamily: 'var(--sans)',
+    fontSize: '14px', fontWeight: 600, fontFamily: 'var(--sans)', cursor: 'pointer',
   },
 }

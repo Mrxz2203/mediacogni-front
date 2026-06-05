@@ -1,5 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ocularImg from '../assets/ocular.png'
+import clasiImg from '../assets/clasi.png'
+import resultadosImg from '../assets/resultados.png'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -32,7 +35,9 @@ export default function Home() {
         <div style={styles.cards}>
           {CARDS.map(c => (
             <div key={c.label} style={styles.card}>
-              <div style={styles.cardIcon}>{c.icon}</div>
+              <div style={styles.cardIcon}>
+                <img src={c.img} alt={c.label} style={styles.cardImg} />
+              </div>
               <div style={styles.cardLabel}>{c.label}</div>
               <div style={styles.cardDesc}>{c.desc}</div>
             </div>
@@ -45,9 +50,9 @@ export default function Home() {
 }
 
 const CARDS = [
-  { icon: '👁', label: 'Seguimiento ocular', desc: 'MediaPipe detecta landmarks faciales en tiempo real' },
-  { icon: '🧠', label: 'Clasificación cognitiva', desc: 'XGBoost clasifica tu perfil: Visual o Verbal' },
-  { icon: '📊', label: 'Resultados', desc: 'Revisa tu historial y evolución en el tiempo' },
+  { img: ocularImg,     label: 'Seguimiento ocular',    desc: 'MediaPipe detecta landmarks faciales en tiempo real' },
+  { img: clasiImg,      label: 'Clasificación cognitiva', desc: 'XGBoost clasifica tu perfil: Visual o Verbal' },
+  { img: resultadosImg, label: 'Resultados',             desc: 'Revisa tu historial y evolución en el tiempo' },
 ]
 
 function ArrowIcon() {
@@ -134,7 +139,8 @@ const styles = {
     borderRadius: 'var(--radius)',
     padding: '24px',
   },
-  cardIcon: { fontSize: '24px', marginBottom: '12px' },
+  cardIcon: { marginBottom: '12px' },
+  cardImg:  { width: '48px', height: '48px', objectFit: 'contain' },
   cardLabel: { fontSize: '14px', fontWeight: 500, marginBottom: '6px' },
   cardDesc: { fontSize: '12px', color: 'var(--muted)', lineHeight: 1.6 },
 }

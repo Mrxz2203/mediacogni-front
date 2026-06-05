@@ -1,6 +1,11 @@
 import { useNavigate } from 'react-router-dom'
 import analisis from '../assets/analisis.png'
 import cogni from '../assets/cogni.png'
+import ocularImg from '../assets/ocular.png'
+import clasiImg from '../assets/clasi.png'
+import historialImg from '../assets/historial.png'
+import protegerImg from '../assets/proteger.png'
+
 export default function LandingPage() {
   const navigate = useNavigate()
 
@@ -61,7 +66,9 @@ export default function LandingPage() {
       <section style={s.features}>
         {FEATURES.map(f => (
           <div key={f.title} style={s.featureCard}>
-            <div style={s.featureIcon}>{f.icon}</div>
+            <div style={s.featureIcon}>
+              <img src={f.img} alt={f.title} style={s.featureImg} />
+            </div>
             <div style={s.featureTitle}>{f.title}</div>
             <div style={s.featureDesc}>{f.desc}</div>
           </div>
@@ -82,11 +89,12 @@ const STATS = [
   { val: '2',   label: 'Perfiles cognitivos' },
 ]
 
+// Las imágenes se importan arriba y se referencian aquí
 const FEATURES = [
-  { icon: '👁', title: 'Seguimiento ocular',    desc: 'MediaPipe detecta landmarks faciales con precisión milimétrica en tiempo real usando tu webcam estándar.' },
-  { icon: '🧠', title: 'Clasificación XGBoost', desc: 'Modelo entrenado que clasifica automáticamente el perfil cognitivo: Visual o Verbal con alta confianza.' },
-  { icon: '📊', title: 'Historial y evolución', desc: 'Revisa los resultados de cada sesión y compara la evolución del perfil cognitivo a lo largo del tiempo.' },
-  { icon: '🔒', title: 'No invasivo',           desc: 'Sin hardware especial, sin almacenamiento de video. Solo se procesan datos biométricos en tiempo real.' },
+  { img: ocularImg,   title: 'Seguimiento ocular',    desc: 'MediaPipe detecta landmarks faciales con precisión milimétrica en tiempo real usando tu webcam estándar.' },
+  { img: clasiImg,    title: 'Clasificación XGBoost', desc: 'Modelo entrenado que clasifica automáticamente el perfil cognitivo: Visual o Verbal con alta confianza.' },
+  { img: historialImg,title: 'Historial y evolución', desc: 'Revisa los resultados de cada sesión y compara la evolución del perfil cognitivo a lo largo del tiempo.' },
+  { img: protegerImg, title: 'No invasivo',           desc: 'Sin hardware especial, sin almacenamiento de video. Solo se procesan datos biométricos en tiempo real.' },
 ]
 
 const s = {
@@ -116,7 +124,8 @@ const s = {
   heroImg: { maxWidth: '480px', width: '100%', objectFit: 'contain' },
   features: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', padding: '0 48px 80px' },
   featureCard: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' },
-  featureIcon: { fontSize: '28px', marginBottom: '14px' },
+  featureIcon: { marginBottom: '14px' },
+  featureImg: { width: '48px', height: '48px', objectFit: 'contain' },  // ajusta el tamaño a tu gusto
   featureTitle: { fontSize: '14px', fontWeight: 600, marginBottom: '8px' },
   featureDesc: { fontSize: '12px', color: 'var(--muted)', lineHeight: 1.65 },
   footer: { background: 'var(--surface)', borderTop: '1px solid var(--border)', padding: '24px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
