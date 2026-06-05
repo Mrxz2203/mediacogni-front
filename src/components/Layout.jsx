@@ -4,7 +4,7 @@ import Sidebar from './Sidebar'
 const PAGE_TITLES = {
   '/inicio':          'Inicio',
   '/perfil':          'Perfil',
-  '/sistema':         'Sistema — MileEye',
+  '/sistema':         'Sistema — V-COGNI',
   '/sistema/sesion':  'Sesión en vivo',
   '/historial':       'Historial',
 }

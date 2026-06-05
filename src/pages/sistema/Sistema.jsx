@@ -9,7 +9,7 @@ export default function Sistema() {
     <>
       <div style={styles.container}>
         {/* Header badge */}
-        <div style={styles.tag}>MileEye · Clasificador cognitivo</div>
+        <div style={styles.tag}>V-COGNI · Clasificador cognitivo</div>
 
         {/* Main intro card */}
         <div style={styles.heroCard}>
@@ -19,9 +19,9 @@ export default function Sistema() {
               <circle cx="12" cy="12" r="3"/>
             </svg>
           </div>
-          <h2 style={styles.heroTitle}>¿Qué es MileEye?</h2>
+          <h2 style={styles.heroTitle}>¿Qué es V-COGNI?</h2>
           <p style={styles.heroDesc}>
-            MileEye analiza tu comportamiento ocular durante 90 segundos para identificar
+            V-Cogni analiza tu comportamiento ocular durante 90 segundos para identificar
             tu estilo cognitivo. El sistema utiliza <strong style={{ color: 'var(--accent)' }}>MediaPipe</strong> para
             detectar los movimientos de tus ojos en tiempo real y <strong style={{ color: 'var(--accent)' }}>XGBoost</strong> para
             clasificarte como estudiante <em>Visual</em> o <em>Verbal</em>.
@@ -73,7 +73,7 @@ export default function Sistema() {
             </div>
             <h3 style={styles.modalTitle}>Permiso de cámara requerido</h3>
             <p style={styles.modalDesc}>
-              MileEye necesita acceso a tu cámara web para analizar tus movimientos oculares.
+              V-COGNI necesita acceso a tu cámara web para analizar tus movimientos oculares.
               El video <strong>no se almacena</strong> — solo se procesan los datos biométricos en tiempo real.
             </p>
             <div style={styles.modalNote}>
