@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import cogni from '../assets/cogni.png'
 import registerImg from '../assets/Register.png'
 import estudianteImg from '../assets/estudiante.png'
-import docenteImg from '../assets/docente.png'
 import { useAuth } from '../context/AuthContext'
 
 export default function RegisterPage() {
@@ -87,7 +86,6 @@ export default function RegisterPage() {
             <div style={s.rolRow}>
               {[
                 { key: 'estudiante', img: estudianteImg },
-                { key: 'docente',    img: docenteImg    },
               ].map(({ key, img }) => (
                 <button key={key} onClick={() => setRol(key)} style={{
                   ...s.rolBtn,

@@ -8,6 +8,8 @@ export default function Home() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
+  const isAdmin = user?.rol === 'admin'
+
   return (
     <div style={styles.container}>
 
@@ -16,43 +18,49 @@ export default function Home() {
         <div style={styles.welcome}>
           <div style={styles.tag}>V-COGNI</div>
           <h2 style={styles.title}>
-            Bienvenido, {user?.nombre?.split(' ')[0] ?? 'estudiante'} 👋
+            Bienvenido, {user?.nombre?.split(' ')[0] ?? 'usuario'} 👋
           </h2>
           <p style={styles.desc}>
             V-COGNI identifica tu estilo cognitivo (visual o verbal) mediante
             seguimiento ocular en tiempo real. El proceso dura 90 segundos
             y usa tu cámara web estándar.
           </p>
-          <button style={styles.btn} onClick={() => navigate('/sistema')}>
-            Ir al sistema
-            <ArrowIcon />
-          </button>
+
+          {/* Botón solo para estudiantes */}
+          {!isAdmin && (
+            <button style={styles.btn} onClick={() => navigate('/sistema')}>
+              Ir al sistema
+              <ArrowIcon />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Cards informativas centradas */}
-      <div style={styles.cardsWrap}>
-        <div style={styles.cards}>
-          {CARDS.map(c => (
-            <div key={c.label} style={styles.card}>
-              <div style={styles.cardIcon}>
-                <img src={c.img} alt={c.label} style={styles.cardImg} />
+      {/* Cards informativas solo para estudiantes */}
+      {!isAdmin && (
+        <div style={styles.cardsWrap}>
+          <div style={styles.cards}>
+            {CARDS.map(c => (
+              <div key={c.label} style={styles.card}>
+                <div style={styles.cardIcon}>
+                  <img src={c.img} alt={c.label} style={styles.cardImg} />
+                </div>
+                <div style={styles.cardLabel}>{c.label}</div>
+                <div style={styles.cardDesc}>{c.desc}</div>
               </div>
-              <div style={styles.cardLabel}>{c.label}</div>
-              <div style={styles.cardDesc}>{c.desc}</div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   )
 }
 
 const CARDS = [
-  { img: ocularImg,     label: 'Seguimiento ocular',    desc: 'MediaPipe detecta landmarks faciales en tiempo real' },
-  { img: clasiImg,      label: 'Clasificación cognitiva', desc: 'XGBoost clasifica tu perfil: Visual o Verbal' },
-  { img: resultadosImg, label: 'Resultados',             desc: 'Revisa tu historial y evolución en el tiempo' },
+  { img: ocularImg,     label: 'Seguimiento ocular',      desc: 'MediaPipe detecta landmarks faciales en tiempo real' },
+  { img: clasiImg,      label: 'Clasificación cognitiva',  desc: 'XGBoost clasifica tu perfil: Visual o Verbal' },
+  { img: resultadosImg, label: 'Resultados',               desc: 'Revisa tu historial y evolución en el tiempo' },
 ]
 
 function ArrowIcon() {
@@ -139,8 +147,8 @@ const styles = {
     borderRadius: 'var(--radius)',
     padding: '24px',
   },
-  cardIcon: { marginBottom: '12px' },
-  cardImg:  { width: '48px', height: '48px', objectFit: 'contain' },
+  cardIcon:  { marginBottom: '12px' },
+  cardImg:   { width: '48px', height: '48px', objectFit: 'contain' },
   cardLabel: { fontSize: '14px', fontWeight: 500, marginBottom: '6px' },
-  cardDesc: { fontSize: '12px', color: 'var(--muted)', lineHeight: 1.6 },
+  cardDesc:  { fontSize: '12px', color: 'var(--muted)', lineHeight: 1.6 },
 }

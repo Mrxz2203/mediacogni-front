@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
     if (!res.ok) throw new Error('Credenciales incorrectas')
     const data = await res.json()
     localStorage.setItem('vcogni_token', data.access_token)
-    const userData = { nombre: data.nombre, rol: data.rol, codigo }
+    const userData = { nombre: data.nombre, rol: data.rol, codigo, id: data.id }
     localStorage.setItem('vcogni_user', JSON.stringify(userData))
     setUser(userData)
     return data.rol
