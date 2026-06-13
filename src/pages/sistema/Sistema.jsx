@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import iluminarImg from '../../assets/iluminar.png'
 import camaraImg   from '../../assets/camara.png'
 import pythonImg   from '../../assets/python.png'
@@ -7,12 +8,59 @@ import pythonImg   from '../../assets/python.png'
 export default function Sistema() {
   const [showModal, setShowModal] = useState(false)
   const navigate = useNavigate()
+  const { cuestionarioCompletado, getMisSesiones } = useAuth()
+  const [sesiones, setSesiones] = useState(null)
+  const [loadingSesiones, setLoadingSesiones] = useState(false)
 
+  // Cargar sesiones solo una vez para comparar fechas
+  useState(() => {
+    setLoadingSesiones(true)
+    getMisSesiones()
+      .then(data => setSesiones(data))
+      .catch(() => setSesiones([]))
+      .finally(() => setLoadingSesiones(false))
+  }, [])
+
+  // ── Lógica de acceso ──────────────────────────────────────────────────────
+  // Caso 1: no hay cuestionario en absoluto
+  if (!cuestionarioCompletado) {
+    return <PantallaBloqueo navigate={navigate} mensaje="primero" />
+  }
+
+  // Mientras carga las sesiones, no mostrar nada aún
+  if (loadingSesiones || sesiones === null) {
+    return <div style={{ padding: '40px', color: 'var(--muted)', textAlign: 'center' }}>Cargando...</div>
+  }
+
+  // Caso 2: hay sesiones biométricas más recientes que el cuestionario
+  // → el usuario hizo la prueba, luego eligió "responder de nuevo" el cuestionario
+  //   pero AÚN NO lo ha enviado (cuestionarioCompletado.fecha es la del cuestionario anterior)
+  // Para detectar esto comparamos fecha del cuestionario vs fecha de la sesión más reciente
+  if (sesiones.length > 0) {
+    const fechaCuestionario = new Date(cuestionarioCompletado.fecha)
+    const fechaUltimaSesion = new Date(sesiones[0].fecha) // ya viene ordenado desc
+    if (fechaUltimaSesion > fechaCuestionario) {
+      return <PantallaBloqueo navigate={navigate} mensaje="actualizar" />
+    }
+  }
+
+  // ── Vista normal: cuestionario más reciente que la última sesión ───────────
   return (
     <>
       <div style={styles.container}>
-        {/* Header badge */}
         <div style={styles.tag}>V-COGNI · Clasificador cognitivo</div>
+
+        {/* Badge cuestionario completado */}
+        <div style={styles.qBadge}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20,6 9,17 4,12"/>
+          </svg>
+          <span>
+            Cuestionario F-S completado — Perfil:{' '}
+            <strong style={{ color: 'var(--accent)' }}>{cuestionarioCompletado.resultado}</strong>
+            {' '}(puntaje: {cuestionarioCompletado.puntaje > 0 ? '+' : ''}{cuestionarioCompletado.puntaje})
+          </span>
+        </div>
 
         {/* Main intro card */}
         <div style={styles.heroCard}>
@@ -84,12 +132,8 @@ export default function Sistema() {
               <span>La sesión dura exactamente <strong>90 segundos</strong>. Asegúrate de estar en un lugar bien iluminado.</span>
             </div>
             <div style={styles.modalBtns}>
-              <button style={styles.cancelBtn} onClick={() => setShowModal(false)}>
-                Cancelar
-              </button>
-              <button style={styles.confirmBtn} onClick={() => navigate('/sistema/sesion')}>
-                Sí, continuar
-              </button>
+              <button style={styles.cancelBtn} onClick={() => setShowModal(false)}>Cancelar</button>
+              <button style={styles.confirmBtn} onClick={() => navigate('/sistema/sesion')}>Sí, continuar</button>
             </div>
           </div>
         </div>
@@ -98,17 +142,66 @@ export default function Sistema() {
   )
 }
 
+// ── Pantalla de bloqueo reutilizable ─────────────────────────────────────────
+function PantallaBloqueo({ navigate, mensaje }) {
+  const esPrimera   = mensaje === 'primero'
+  const titulo      = esPrimera
+    ? 'Primero completa el cuestionario'
+    : 'Actualiza tu cuestionario antes de continuar'
+  const descripcion = esPrimera
+    ? 'Para acceder a la prueba biométrica, debes completar primero el Cuestionario Felder-Silverman. Este paso es necesario para validar tu perfil cognitivo con ambos métodos.'
+    : 'Ya realizaste una prueba biométrica después de tu último cuestionario. Para volver a hacer la prueba, debes completar el cuestionario nuevamente para que la validación cruzada sea válida.'
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.tag}>V-COGNI · Clasificador cognitivo</div>
+      <div style={styles.heroCard}>
+        <div style={styles.bloqIcon}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <h2 style={styles.heroTitle}>{titulo}</h2>
+        <p style={styles.heroDesc}>{descripcion}</p>
+
+        <div style={styles.bloqPasos}>
+          <div style={styles.bloqPaso}>
+            <div style={{ ...styles.stepNum, background: 'var(--accent)', color: '#020c08' }}>1</div>
+            <div>
+              <div style={styles.stepTitle}>Cuestionario F-S</div>
+              <div style={styles.stepDesc}>11 preguntas sobre tu estilo de aprendizaje</div>
+            </div>
+          </div>
+          <div style={styles.bloqFlecha}>↓</div>
+          <div style={styles.bloqPaso}>
+            <div style={{ ...styles.stepNum, opacity: 0.4 }}>2</div>
+            <div style={{ opacity: 0.4 }}>
+              <div style={styles.stepTitle}>Prueba biométrica</div>
+              <div style={styles.stepDesc}>90 segundos de eye-tracking con tu cámara</div>
+            </div>
+          </div>
+        </div>
+
+        <button style={styles.startBtn} onClick={() => navigate('/cuestionario')}>
+          {esPrimera ? 'Ir al cuestionario →' : 'Actualizar cuestionario →'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const STEPS = [
-  { title: 'Permiso de cámara', desc: 'Aceptas el acceso a tu webcam estándar.' },
-  { title: 'Sesión de 90 segundos', desc: 'El sistema captura tus métricas oculares en vivo.' },
+  { title: 'Permiso de cámara',       desc: 'Aceptas el acceso a tu webcam estándar.' },
+  { title: 'Sesión de 90 segundos',   desc: 'El sistema captura tus métricas oculares en vivo.' },
   { title: 'Clasificación automática', desc: 'XGBoost determina tu perfil: Visual o Verbal.' },
-  { title: 'Resultados en Historial', desc: 'Tu estilo cognitivo queda guardado para revisión.' },
+  { title: 'Resultados en Historial',  desc: 'Tu estilo cognitivo queda guardado para revisión.' },
 ]
 
 const REQS = [
-  { img: camaraImg,   label: 'Cámara web',        desc: 'Cualquier webcam estándar' },
-  { img: iluminarImg, label: 'Buena iluminación',  desc: 'Evita contraluz directa' },
-  { img: pythonImg,   label: 'Python corriendo',   desc: 'eye_coordinates_cam.py activo' },
+  { img: camaraImg,   label: 'Cámara web',       desc: 'Cualquier webcam estándar' },
+  { img: iluminarImg, label: 'Buena iluminación', desc: 'Evita contraluz directa' },
+  { img: pythonImg,   label: 'Python corriendo',  desc: 'eye_coordinates_cam.py activo' },
 ]
 
 const styles = {
@@ -119,9 +212,21 @@ const styles = {
     border: '1px solid rgba(0,212,170,0.2)', borderRadius: '100px',
     padding: '4px 12px', letterSpacing: '0.08em',
   },
+  qBadge: {
+    display: 'inline-flex', alignItems: 'center', gap: '8px',
+    background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.25)',
+    borderRadius: '8px', padding: '10px 14px',
+    fontSize: '13px', color: 'var(--muted2)',
+  },
   heroCard: {
     background: 'var(--surface)', border: '1px solid var(--border)',
     borderRadius: 'var(--radius-lg)', padding: '40px',
+  },
+  bloqIcon: {
+    width: '72px', height: '72px', background: 'var(--accent-dim)',
+    border: '1px solid rgba(0,212,170,0.2)', borderRadius: '20px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    marginBottom: '24px',
   },
   eyeGlyph: {
     width: '72px', height: '72px', background: 'var(--accent-dim)',
@@ -130,9 +235,12 @@ const styles = {
     marginBottom: '24px',
   },
   heroTitle: { fontSize: '22px', fontWeight: 600, marginBottom: '12px', letterSpacing: '-0.02em' },
-  heroDesc: { color: 'var(--muted2)', lineHeight: 1.75, fontSize: '14px', marginBottom: '32px' },
-  steps: { display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '32px' },
-  step: { display: 'flex', alignItems: 'flex-start', gap: '14px' },
+  heroDesc:  { color: 'var(--muted2)', lineHeight: 1.75, fontSize: '14px', marginBottom: '32px' },
+  bloqPasos: { display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' },
+  bloqPaso:  { display: 'flex', alignItems: 'flex-start', gap: '14px' },
+  bloqFlecha:{ fontSize: '18px', color: 'var(--muted)', paddingLeft: '7px' },
+  steps:     { display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '32px' },
+  step:      { display: 'flex', alignItems: 'flex-start', gap: '14px' },
   stepNum: {
     width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
     background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)',
@@ -140,7 +248,7 @@ const styles = {
     fontSize: '12px', fontWeight: 700, color: 'var(--accent)', fontFamily: 'var(--mono)',
   },
   stepTitle: { fontSize: '14px', fontWeight: 500, marginBottom: '2px' },
-  stepDesc: { fontSize: '12px', color: 'var(--muted)' },
+  stepDesc:  { fontSize: '12px', color: 'var(--muted)' },
   startBtn: {
     display: 'inline-flex', alignItems: 'center',
     background: 'var(--accent)', color: '#020c08',
@@ -153,14 +261,12 @@ const styles = {
     borderRadius: 'var(--radius)', padding: '16px 18px',
     display: 'flex', alignItems: 'flex-start', gap: '12px',
   },
-  reqImg: { width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 },
+  reqImg:   { width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 },
   reqLabel: { fontSize: '13px', fontWeight: 500, marginBottom: '2px' },
-  reqDesc: { fontSize: '11px', color: 'var(--muted)' },
-  /* Modal */
+  reqDesc:  { fontSize: '11px', color: 'var(--muted)' },
   overlay: {
     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    zIndex: 999,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999,
   },
   modal: {
     background: 'var(--surface)', border: '1px solid var(--border2)',
@@ -174,13 +280,13 @@ const styles = {
     marginBottom: '20px',
   },
   modalTitle: { fontSize: '18px', fontWeight: 600, marginBottom: '12px' },
-  modalDesc: { fontSize: '13px', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: '16px' },
+  modalDesc:  { fontSize: '13px', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: '16px' },
   modalNote: {
     display: 'flex', alignItems: 'flex-start', gap: '10px',
     background: 'var(--surface2)', borderRadius: '8px', padding: '12px 14px',
     fontSize: '12px', color: 'var(--muted2)', marginBottom: '28px',
   },
-  modalBtns: { display: 'flex', gap: '12px' },
+  modalBtns:  { display: 'flex', gap: '12px' },
   cancelBtn: {
     flex: 1, padding: '10px', background: 'none',
     border: '1px solid var(--border2)', borderRadius: '8px',

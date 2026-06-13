@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 
 const API = 'http://localhost:8000'
 const AuthContext = createContext(null)
@@ -9,7 +9,20 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null
   })
 
+  // Estado del cuestionario: null = no completado, objeto = resultado
+  const [cuestionarioCompletado, setCuestionarioCompletado] = useState(null)
+
   const token = localStorage.getItem('vcogni_token')
+
+  // Al cargar, si hay usuario logueado, consultar si ya completó el cuestionario
+  useEffect(() => {
+    if (user && token) {
+      fetch(`${API}/cuestionario/me?token=${token}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setCuestionarioCompletado(data) })
+        .catch(() => {})
+    }
+  }, [user])
 
   const registro = async (data) => {
     const res = await fetch(`${API}/auth/register`, {
@@ -33,6 +46,16 @@ export function AuthProvider({ children }) {
     const userData = { nombre: data.nombre, rol: data.rol, codigo, id: data.id }
     localStorage.setItem('vcogni_user', JSON.stringify(userData))
     setUser(userData)
+
+    // Cargar cuestionario al iniciar sesión
+    try {
+      const qRes = await fetch(`${API}/cuestionario/me?token=${data.access_token}`)
+      if (qRes.ok) {
+        const qData = await qRes.json()
+        setCuestionarioCompletado(qData)
+      }
+    } catch (_) {}
+
     return data.rol
   }
 
@@ -40,6 +63,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('vcogni_token')
     localStorage.removeItem('vcogni_user')
     setUser(null)
+    setCuestionarioCompletado(null)
   }
 
   const guardarSesion = async (sesionData) => {
@@ -60,8 +84,30 @@ export function AuthProvider({ children }) {
     return await res.json()
   }
 
+  // Enviar respuestas del cuestionario
+  const enviarCuestionario = async (respuestas) => {
+    const t = localStorage.getItem('vcogni_token')
+    const res = await fetch(`${API}/cuestionario?token=${t}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ respuestas }),
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.detail || 'Error al enviar cuestionario')
+    }
+    const data = await res.json()
+    setCuestionarioCompletado(data)
+    return data
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, registro, login, logout, guardarSesion, getMisSesiones }}>
+    <AuthContext.Provider value={{
+      user, token,
+      registro, login, logout,
+      guardarSesion, getMisSesiones,
+      enviarCuestionario, cuestionarioCompletado,
+    }}>
       {children}
     </AuthContext.Provider>
   )
