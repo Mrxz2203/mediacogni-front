@@ -10,8 +10,8 @@ export default function GestionUsuariosPage() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [editForm,     setEditForm]     = useState({})
   const [expandido,    setExpandido]    = useState(null)
-  const [detalle,      setDetalle]      = useState({})
-  const [busqueda, setBusqueda] = useState('')
+  const [detalle,      setDetalle]      = useState({}) // { [userId]: { sesiones, cuestionarios, loading } }
+  const [busqueda,     setBusqueda]     = useState('')
   const navigate = useNavigate()
   const token = localStorage.getItem('vcogni_token')
 
@@ -20,6 +20,11 @@ export default function GestionUsuariosPage() {
       .then(r => r.json())
       .then(data => { setUsuarios(data); setLoading(false) })
   }, [])
+
+  const usuariosFiltrados = usuarios.filter(u =>
+    u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+    u.codigo.toLowerCase().includes(busqueda.toLowerCase())
+  )
 
   const handleDelete = async () => {
     await fetch(`${API}/admin/usuarios/${deleteTarget.id}?token=${token}`, { method: 'DELETE' })
@@ -40,30 +45,43 @@ export default function GestionUsuariosPage() {
     }
   }
 
+  // Buscar el cuestionario vigente para una sesión (igual lógica que Historial.jsx)
+  const getCuestionarioVigente = (cuestionarios, fechaSesion) => {
+    const fecha = new Date(fechaSesion)
+    const anteriores = cuestionarios.filter(q => new Date(q.fecha) <= fecha)
+    if (anteriores.length === 0) return null
+    return anteriores.reduce((a, b) => new Date(a.fecha) > new Date(b.fecha) ? a : b)
+  }
+
   // Cargar detalle del usuario al expandir
   const toggleExpand = async (u) => {
     if (expandido === u.id) { setExpandido(null); return }
     setExpandido(u.id)
 
-    // Si ya cargamos, no volver a cargar
     if (detalle[u.id]) return
 
     setDetalle(prev => ({ ...prev, [u.id]: { loading: true } }))
 
     const [sesRes, qRes] = await Promise.all([
       fetch(`${API}/admin/usuarios/${u.id}/sesiones?token=${token}`),
-      fetch(`${API}/admin/usuarios/${u.id}/cuestionario?token=${token}`),
+      fetch(`${API}/admin/usuarios/${u.id}/cuestionarios?token=${token}`),
     ])
 
-    const sesiones     = sesRes.ok  ? await sesRes.json() : []
-    const cuestionario = qRes.ok    ? await qRes.json()   : null
+    const sesiones      = sesRes.ok ? await sesRes.json() : []
+    const cuestionarios = qRes.ok   ? await qRes.json()   : []
 
-    setDetalle(prev => ({ ...prev, [u.id]: { sesiones, cuestionario, loading: false } }))
+    setDetalle(prev => ({ ...prev, [u.id]: { sesiones, cuestionarios, loading: false } }))
   }
 
   const formatFecha = (iso) => {
     const d = new Date(iso)
     return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const colorResultado = (resultado) => {
+    if (resultado === 'Visual')     return { c: 'var(--accent)',  bg: 'rgba(0,212,170,0.1)',  bd: 'rgba(0,212,170,0.3)' }
+    if (resultado === 'Verbal')     return { c: '#818cf8',         bg: 'rgba(99,102,241,0.1)', bd: 'rgba(99,102,241,0.3)' }
+    return { c: '#fbbf24', bg: 'rgba(251,191,36,0.1)', bd: 'rgba(251,191,36,0.3)' }
   }
 
   // ── Modal editar ──
@@ -138,24 +156,19 @@ export default function GestionUsuariosPage() {
     </div>
   )
 
-const usuariosFiltrados = usuarios.filter(u =>
-  u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-  u.codigo.toLowerCase().includes(busqueda.toLowerCase())
-)
-
   // ── Vista lista ──
   return (
     <div>
       <div style={styles.header}>
-  <h2 style={styles.title}>Gestión de Usuarios</h2>
-  <input
-    style={styles.buscador}
-    placeholder="Buscar por nombre o código..."
-    value={busqueda}
-    onChange={e => setBusqueda(e.target.value)}
-  />
-  <button onClick={() => navigate('/admin/usuarios')} style={styles.btnVolver}>← Volver</button>
-</div>
+        <h2 style={styles.title}>Gestión de Usuarios</h2>
+        <input
+          style={styles.buscador}
+          placeholder="Buscar por nombre o código..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+        />
+        <button onClick={() => navigate('/admin/usuarios')} style={styles.btnVolver}>← Volver</button>
+      </div>
 
       <div style={styles.grid}>
         {usuariosFiltrados.map(u => {
@@ -200,51 +213,69 @@ const usuariosFiltrados = usuarios.filter(u =>
                     <div style={styles.detalleLoading}>Cargando...</div>
                   ) : (
                     <>
-                      {/* Cuestionario */}
+                      {/* Evolución del cuestionario */}
                       <div style={styles.detalleSeccion}>
-                        <div style={styles.detalleTitulo}>📝 Cuestionario F-S</div>
-                        {info?.cuestionario ? (
-                          <div style={styles.qResultRow}>
-                            <div style={{
-                              ...styles.qResultBadge,
-                              color: info.cuestionario.resultado === 'Visual' ? 'var(--accent)' : info.cuestionario.resultado === 'Verbal' ? '#818cf8' : '#fbbf24',
-                              background: info.cuestionario.resultado === 'Visual' ? 'rgba(0,212,170,0.1)' : info.cuestionario.resultado === 'Verbal' ? 'rgba(99,102,241,0.1)' : 'rgba(251,191,36,0.1)',
-                              border: `1px solid ${info.cuestionario.resultado === 'Visual' ? 'rgba(0,212,170,0.3)' : info.cuestionario.resultado === 'Verbal' ? 'rgba(99,102,241,0.3)' : 'rgba(251,191,36,0.3)'}`,
-                            }}>
-                              {info.cuestionario.resultado}
-                            </div>
-                            <div style={styles.qPuntaje}>
-                              Puntaje: {info.cuestionario.puntaje > 0 ? '+' : ''}{info.cuestionario.puntaje}
-                            </div>
-                            <div style={styles.qFecha}>{formatFecha(info.cuestionario.fecha)}</div>
+                        <div style={styles.detalleTitulo}>
+                          📝 Evolución del cuestionario F-S ({info?.cuestionarios?.length ?? 0})
+                        </div>
+                        {info?.cuestionarios?.length > 0 ? (
+                          <div style={styles.sesionesLista}>
+                            {info.cuestionarios.map((q, i) => {
+                              const col = colorResultado(q.resultado)
+                              return (
+                                <div key={q.id} style={styles.sesionRow}>
+                                  <div style={styles.sesionNum}>#{info.cuestionarios.length - i}</div>
+                                  <div style={styles.sesionFecha}>{formatFecha(q.fecha)}</div>
+                                  <div style={{ ...styles.sesionBadge, color: col.c, background: col.bg, border: `1px solid ${col.bd}` }}>
+                                    {q.resultado}
+                                  </div>
+                                  <div style={styles.sesionConf}>
+                                    {q.puntaje > 0 ? '+' : ''}{q.puntaje}
+                                  </div>
+                                </div>
+                              )
+                            })}
                           </div>
                         ) : (
-                          <div style={styles.sinDatos}>Sin cuestionario completado</div>
+                          <div style={styles.sinDatos}>Sin cuestionarios completados</div>
                         )}
                       </div>
 
-                      {/* Sesiones biométricas */}
+                      {/* Sesiones biométricas con validación cruzada */}
                       <div style={styles.detalleSeccion}>
                         <div style={styles.detalleTitulo}>👁️ Pruebas biométricas ({info?.sesiones?.length ?? 0})</div>
                         {info?.sesiones?.length > 0 ? (
                           <div style={styles.sesionesLista}>
-                            {info.sesiones.slice(0, 5).map((ses, i) => (
-                              <div key={ses.id} style={styles.sesionRow}>
-                                <div style={styles.sesionNum}>#{info.sesiones.length - i}</div>
-                                <div style={styles.sesionFecha}>{formatFecha(ses.fecha)}</div>
-                                <div style={{
-                                  ...styles.sesionBadge,
-                                  color: ses.estilo_cognitivo === 'Visual' ? 'var(--accent)' : '#818cf8',
-                                  background: ses.estilo_cognitivo === 'Visual' ? 'rgba(0,212,170,0.1)' : 'rgba(99,102,241,0.1)',
-                                  border: `1px solid ${ses.estilo_cognitivo === 'Visual' ? 'rgba(0,212,170,0.3)' : 'rgba(99,102,241,0.3)'}`,
-                                }}>
-                                  {ses.estilo_cognitivo ?? '—'}
+                            {info.sesiones.slice(0, 5).map((ses, i) => {
+                              const qVigente = getCuestionarioVigente(info.cuestionarios ?? [], ses.fecha)
+                              return (
+                                <div key={ses.id} style={styles.sesionRowExt}>
+                                  <div style={styles.sesionRow}>
+                                    <div style={styles.sesionNum}>#{info.sesiones.length - i}</div>
+                                    <div style={styles.sesionFecha}>{formatFecha(ses.fecha)}</div>
+                                    <div style={{
+                                      ...styles.sesionBadge,
+                                      color: ses.estilo_cognitivo === 'Visual' ? 'var(--accent)' : '#818cf8',
+                                      background: ses.estilo_cognitivo === 'Visual' ? 'rgba(0,212,170,0.1)' : 'rgba(99,102,241,0.1)',
+                                      border: `1px solid ${ses.estilo_cognitivo === 'Visual' ? 'rgba(0,212,170,0.3)' : 'rgba(99,102,241,0.3)'}`,
+                                    }}>
+                                      {ses.estilo_cognitivo ?? '—'}
+                                    </div>
+                                    <div style={styles.sesionConf}>
+                                      {ses.confianza ? `${Math.round(ses.confianza * 100)}%` : '—'}
+                                    </div>
+                                  </div>
+                                  {qVigente && (
+                                    <div style={styles.miniValidacion}>
+                                      vs cuestionario {qVigente.resultado} ({formatFecha(qVigente.fecha)})
+                                      {qVigente.resultado === ses.estilo_cognitivo
+                                        ? <span style={{ color: 'var(--accent)', marginLeft: '6px' }}>✓ coincide</span>
+                                        : <span style={{ color: '#fbbf24', marginLeft: '6px' }}>⚠ difiere</span>}
+                                    </div>
+                                  )}
                                 </div>
-                                <div style={styles.sesionConf}>
-                                  {ses.confianza ? `${Math.round(ses.confianza * 100)}%` : '—'}
-                                </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                             {info.sesiones.length > 5 && (
                               <div style={styles.sinDatos}>+{info.sesiones.length - 5} sesiones más</div>
                             )}
@@ -268,9 +299,10 @@ const usuariosFiltrados = usuarios.filter(u =>
 function TrashIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',marginRight:'8px'}}><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14H6L5,6"/><path d="M10,11v6"/><path d="M14,11v6"/><path d="M9,6V4h6v2"/></svg> }
 
 const styles = {
-  header:         { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' },
+  header:         { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', gap: '16px', flexWrap: 'wrap' },
   title:          { fontSize: '20px', fontWeight: 600, color: 'var(--text)', margin: 0 },
   titleDanger:    { fontSize: '20px', fontWeight: 600, color: '#ff5050', marginBottom: '24px', display: 'flex', alignItems: 'center' },
+  buscador:       { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: '8px', padding: '7px 14px', color: 'var(--text)', fontSize: '13px', fontFamily: 'var(--sans)', outline: 'none', width: '220px' },
   btnVolver:      { background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 14px', color: 'var(--muted2)', fontSize: '13px', cursor: 'pointer' },
   grid:           { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' },
   card:           { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '6px' },
@@ -288,23 +320,20 @@ const styles = {
   btnEdit:        { flex: 1, padding: '6px 0', background: 'rgba(0,212,170,0.1)', border: '1px solid rgba(0,212,170,0.3)', borderRadius: '6px', color: 'var(--accent)', fontSize: '12px', cursor: 'pointer' },
   btnDelete:      { flex: 1, padding: '6px 0', background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.3)', borderRadius: '6px', color: '#ff5050', fontSize: '12px', cursor: 'pointer' },
   btnVerResultados: { marginTop: '8px', width: '100%', padding: '7px 0', background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: '6px', color: 'var(--muted2)', fontSize: '12px', cursor: 'pointer', fontFamily: 'var(--sans)' },
-buscador: { background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: '8px', padding: '7px 14px', color: 'var(--text)', fontSize: '13px', fontFamily: 'var(--sans)', outline: 'none', width: '220px' },
+
   detallePanel:   { marginTop: '12px', borderTop: '1px solid var(--border)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' },
   detalleLoading: { fontSize: '12px', color: 'var(--muted)', textAlign: 'center', padding: '8px' },
   detalleSeccion: { display: 'flex', flexDirection: 'column', gap: '8px' },
   detalleTitulo:  { fontSize: '11px', fontFamily: 'var(--mono)', color: 'var(--muted)', letterSpacing: '0.05em' },
 
-  qResultRow:     { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' },
-  qResultBadge:   { fontSize: '11px', fontWeight: 700, borderRadius: '100px', padding: '3px 10px' },
-  qPuntaje:       { fontSize: '11px', color: 'var(--muted)', fontFamily: 'var(--mono)' },
-  qFecha:         { fontSize: '11px', color: 'var(--muted)', marginLeft: 'auto' },
-
   sesionesLista:  { display: 'flex', flexDirection: 'column', gap: '6px' },
-  sesionRow:      { display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface2)', borderRadius: '6px', padding: '7px 10px' },
+  sesionRowExt:   { display: 'flex', flexDirection: 'column', gap: '3px', background: 'var(--surface2)', borderRadius: '6px', padding: '7px 10px' },
+  sesionRow:      { display: 'flex', alignItems: 'center', gap: '8px' },
   sesionNum:      { fontSize: '10px', color: 'var(--muted)', fontFamily: 'var(--mono)', minWidth: '24px' },
   sesionFecha:    { fontSize: '11px', color: 'var(--muted2)', flex: 1 },
   sesionBadge:    { fontSize: '10px', fontWeight: 600, borderRadius: '100px', padding: '2px 8px' },
   sesionConf:     { fontSize: '11px', color: 'var(--muted)', fontFamily: 'var(--mono)', minWidth: '32px', textAlign: 'right' },
+  miniValidacion: { fontSize: '10px', color: 'var(--muted)', paddingLeft: '32px' },
   sinDatos:       { fontSize: '11px', color: 'var(--muted)', fontStyle: 'italic' },
 
   formCard:       { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '32px', maxWidth: '520px' },

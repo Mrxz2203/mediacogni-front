@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 import LandingPage         from './public/LandingPage'
 import RegisterPage        from './public/RegisterPage'
 import LoginPage           from './public/LoginPage'
@@ -17,31 +18,35 @@ import NotFound from './public/NotFound'
 export default function App() {
   return (
     <BrowserRouter>
-  <Routes>
-    <Route path="/"         element={<LandingPage />} />
-    <Route path="/registro" element={<RegisterPage />} />
-    <Route path="/login"    element={<LoginPage />} />
+      <Routes>
+        <Route path="/"         element={<LandingPage />} />
+        <Route path="/registro" element={<RegisterPage />} />
+        <Route path="/login"    element={<LoginPage />} />
 
-    <Route element={
-      <ProtectedRoute>
-        <Layout />
-      </ProtectedRoute>
-    }>
-      {/* Rutas estudiante */}
-      <Route path="/inicio"         element={<Home />} />
-      <Route path="/perfil"         element={<Profile />} />
-      <Route path="/cuestionario"   element={<Cuestionario />} />
-      <Route path="/sistema"        element={<Sistema />} />
-      <Route path="/sistema/sesion" element={<LiveSession />} />
-      <Route path="/historial"      element={<Historial />} />
+        <Route element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
+          {/* Rutas estudiante */}
+          <Route path="/inicio"         element={<Home />} />
+          <Route path="/perfil"         element={<Profile />} />
+          <Route path="/cuestionario"   element={<Cuestionario />} />
+          <Route path="/sistema"        element={<Sistema />} />
+          <Route path="/sistema/sesion" element={<LiveSession />} />
+          <Route path="/historial"      element={<Historial />} />
 
-      {/* Rutas admin */}
-      <Route path="/admin/usuarios"       element={<AdminDashboardPage />} />
-      <Route path="/admin/usuarios/lista" element={<GestionUsuariosPage />} />
-    </Route>
+          {/* Rutas admin — protegidas también por rol */}
+          <Route path="/admin/usuarios" element={
+            <AdminRoute><AdminDashboardPage /></AdminRoute>
+          } />
+          <Route path="/admin/usuarios/lista" element={
+            <AdminRoute><GestionUsuariosPage /></AdminRoute>
+          } />
+        </Route>
 
-    <Route path="*" element={<NotFound />} /> 
-  </Routes>
-</BrowserRouter>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   )
 }

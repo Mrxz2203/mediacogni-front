@@ -7,16 +7,17 @@ import { useAuth } from '../context/AuthContext'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { login, user } = useAuth()
+  const { login, user, sesionExpirada, setSesionExpirada } = useAuth()
   const [form, setForm] = useState({ codigo: '', contrasena: '' })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
-  
- if (user) return <Navigate to="/inicio" replace />
+
+  if (user) return <Navigate to="/inicio" replace />
 
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value })
     setErrors({ ...errors, [e.target.name]: '', general: '' })
+    if (sesionExpirada) setSesionExpirada(false)
   }
 
   const validate = () => {
@@ -71,6 +72,14 @@ export default function LoginPage() {
                 <div style={s.cardSub}>Ingresa tus credenciales institucionales</div>
               </div>
             </div>
+
+            {/* Aviso de sesión expirada — aparece solo si fetchAuth detectó un 401 */}
+            {sesionExpirada && (
+              <div style={s.alertWarning}>
+                <span>⏱</span>
+                <span>Tu sesión expiró. Por favor, inicia sesión nuevamente.</span>
+              </div>
+            )}
 
             {errors.general && (
               <div style={s.alertError}>
@@ -144,6 +153,7 @@ const s = {
   cardIcon: { width: '44px', height: '44px', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   cardTitle: { fontSize: '16px', fontWeight: 600, marginBottom: '2px' },
   cardSub: { fontSize: '12px', color: 'var(--muted)' },
+  alertWarning: { display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#fbbf24', marginBottom: '16px' },
   alertError: { display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--danger)', marginBottom: '16px' },
   formWrap: { display: 'flex', flexDirection: 'column', gap: '14px' },
   field: { display: 'flex', flexDirection: 'column', gap: '6px' },

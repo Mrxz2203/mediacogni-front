@@ -12,12 +12,38 @@ export function AuthProvider({ children }) {
   // Estado del cuestionario: null = no completado, objeto = resultado
   const [cuestionarioCompletado, setCuestionarioCompletado] = useState(null)
 
+  // Bandera para mostrar aviso de "sesión expirada" tras redirigir al login
+  const [sesionExpirada, setSesionExpirada] = useState(false)
+
   const token = localStorage.getItem('vcogni_token')
+
+  // ── Logout interno (sin redirigir, solo limpia estado) ──
+  const limpiarSesion = () => {
+    localStorage.removeItem('vcogni_token')
+    localStorage.removeItem('vcogni_user')
+    setUser(null)
+    setCuestionarioCompletado(null)
+  }
+
+  // ── Helper central: hace fetch y detecta 401 en un solo lugar ──
+  // Si el backend responde 401, se asume token vencido o inválido:
+  // limpia la sesión, marca sesionExpirada y redirige a /login.
+  const fetchAuth = async (url, options = {}) => {
+    const res = await fetch(url, options)
+    if (res.status === 401) {
+      limpiarSesion()
+      setSesionExpirada(true)
+      window.location.href = '/login'
+      // Lanzamos para que el caller no intente seguir usando la respuesta
+      throw new Error('Sesión expirada')
+    }
+    return res
+  }
 
   // Al cargar, si hay usuario logueado, consultar si ya completó el cuestionario
   useEffect(() => {
     if (user && token) {
-      fetch(`${API}/cuestionario/me?token=${token}`)
+      fetchAuth(`${API}/cuestionario/me?token=${token}`)
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data) setCuestionarioCompletado(data) })
         .catch(() => {})
@@ -46,6 +72,7 @@ export function AuthProvider({ children }) {
     const userData = { nombre: data.nombre, rol: data.rol, codigo, id: data.id }
     localStorage.setItem('vcogni_user', JSON.stringify(userData))
     setUser(userData)
+    setSesionExpirada(false)
 
     // Cargar cuestionario al iniciar sesión
     try {
@@ -59,16 +86,14 @@ export function AuthProvider({ children }) {
     return data.rol
   }
 
+  // Logout manual (botón "Cerrar sesión")
   const logout = () => {
-    localStorage.removeItem('vcogni_token')
-    localStorage.removeItem('vcogni_user')
-    setUser(null)
-    setCuestionarioCompletado(null)
+    limpiarSesion()
   }
 
   const guardarSesion = async (sesionData) => {
     const t = localStorage.getItem('vcogni_token')
-    const res = await fetch(`${API}/sesiones?token=${t}`, {
+    const res = await fetchAuth(`${API}/sesiones?token=${t}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sesionData),
@@ -79,7 +104,7 @@ export function AuthProvider({ children }) {
 
   const getMisSesiones = async () => {
     const t = localStorage.getItem('vcogni_token')
-    const res = await fetch(`${API}/sesiones/me?token=${t}`)
+    const res = await fetchAuth(`${API}/sesiones/me?token=${t}`)
     if (!res.ok) throw new Error('Error obteniendo historial')
     return await res.json()
   }
@@ -87,7 +112,7 @@ export function AuthProvider({ children }) {
   // Enviar respuestas del cuestionario
   const enviarCuestionario = async (respuestas) => {
     const t = localStorage.getItem('vcogni_token')
-    const res = await fetch(`${API}/cuestionario?token=${t}`, {
+    const res = await fetchAuth(`${API}/cuestionario?token=${t}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ respuestas }),
@@ -101,12 +126,21 @@ export function AuthProvider({ children }) {
     return data
   }
 
+  const getHistorialCuestionarios = async () => {
+    const t = localStorage.getItem('vcogni_token')
+    const res = await fetchAuth(`${API}/cuestionario/historial?token=${t}`)
+    if (!res.ok) return []
+    return await res.json()
+  }
+
   return (
     <AuthContext.Provider value={{
       user, token,
       registro, login, logout,
       guardarSesion, getMisSesiones,
       enviarCuestionario, cuestionarioCompletado,
+      getHistorialCuestionarios,
+      sesionExpirada, setSesionExpirada,
     }}>
       {children}
     </AuthContext.Provider>
