@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import { useAuth } from '../context/AuthContext'
 
 const PAGE_TITLES = {
   '/inicio':          'Inicio',
@@ -7,10 +8,15 @@ const PAGE_TITLES = {
   '/sistema':         'Sistema — V-COGNI',
   '/sistema/sesion':  'Sesión en vivo',
   '/historial':       'Historial',
+  '/cuestionario':            'Cuestionario F-S',       
+  '/admin/usuarios':          'Panel de Administración', 
+  '/admin/usuarios/lista':    'Gestionar Usuarios',      
 }
 
 export default function Layout() {
   const location = useLocation()
+  const { user } = useAuth()
+
   const title = PAGE_TITLES[location.pathname] ?? 'V-COGNI'
 
   return (
@@ -28,7 +34,9 @@ export default function Layout() {
               <span style={styles.dot} />
               <span style={styles.badgeText}>Sistema activo</span>
             </div>
-            <div style={styles.avatar}>GG</div>
+           <div style={styles.avatar}>
+  {user?.nombre?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() ?? 'VC'}
+</div>
           </div>
         </header>
 

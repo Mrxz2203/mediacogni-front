@@ -4,18 +4,17 @@ import { useNavigate } from 'react-router-dom'
 const API = 'http://localhost:8000'
 
 export default function AdminDashboardPage() {
-  const [stats, setStats]   = useState({ usuarios: 0, sesiones: 0 })
+  const [stats,   setStats]   = useState({ usuarios: 0, sesiones: 0 })
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const token = localStorage.getItem('vcogni_token')
 
   useEffect(() => {
-    const headers = { Authorization: `Bearer ${token}` }
     Promise.all([
       fetch(`${API}/admin/usuarios?token=${token}`).then(r => r.json()),
-      fetch(`${API}/sesiones/me?token=${token}`).then(r => r.json()),
+      fetch(`${API}/admin/sesiones/total?token=${token}`).then(r => r.json()),
     ]).then(([usuarios, sesiones]) => {
-      setStats({ usuarios: usuarios.length, sesiones: sesiones.length })
+      setStats({ usuarios: usuarios.length, sesiones: sesiones.total })
       setLoading(false)
     })
   }, [])

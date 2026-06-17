@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import cogni from '../assets/cogni.png'
 import registerImg from '../assets/Register.png'
 import estudianteImg from '../assets/estudiante.png'
@@ -7,11 +7,14 @@ import { useAuth } from '../context/AuthContext'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+
   const [rol, setRol] = useState('estudiante')
   const [form, setForm] = useState({ nombre: '', codigo: '', contrasena: '', carrera: '' })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
-  const { registro } = useAuth()
+   const { registro, user } = useAuth()
+
+    if (user) return <Navigate to="/inicio" replace />
 
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value })

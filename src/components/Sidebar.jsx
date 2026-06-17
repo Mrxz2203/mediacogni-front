@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useState } from 'react'
 
 const NAV_ESTUDIANTE = [
   { to: '/inicio',        label: 'Inicio',       icon: HomeIcon },
@@ -20,12 +21,15 @@ export default function Sidebar() {
   const { logout, user } = useAuth()
   const NAV = user?.rol === 'admin' ? NAV_ADMIN : NAV_ESTUDIANTE
 
-  const handleLogout = () => {
-    logout()
-    navigate('/')
-  }
+const [showLogout, setShowLogout] = useState(false)
+
+const handleLogout = () => {
+  logout()
+  navigate('/')
+}
 
   return (
+     <>
     <aside style={styles.sidebar}>
       <div style={styles.logo}>
         <div style={styles.logoIcon}>
@@ -63,6 +67,7 @@ export default function Sidebar() {
       </nav>
 
       <div style={styles.footer}>
+
         {user && (
           <div style={styles.userInfo}>
             <div style={styles.userAvatar}>{user.nombre?.charAt(0).toUpperCase()}</div>
@@ -73,12 +78,31 @@ export default function Sidebar() {
           </div>
         )}
         <div style={styles.divider} />
-        <button onClick={handleLogout} style={styles.logoutBtn}>
-          <LogoutIcon />
-          <span>Cerrar sesión</span>
+<button onClick={() => setShowLogout(true)} style={styles.logoutBtn}>
+  <LogoutIcon />
+  <span>Cerrar sesión</span>
+</button>
+</div>
+</aside>
+
+ {/* Modal confirmación logout */}
+{showLogout && (
+  <div style={styles.modalOverlay}>
+    <div style={styles.modalBox}>
+      <h3 style={styles.modalTitle}>¿Cerrar sesión?</h3>
+      <p style={styles.modalDesc}>Tu sesión actual se cerrará.</p>
+      <div style={styles.modalBtns}>
+        <button style={styles.modalCancel} onClick={() => setShowLogout(false)}>
+          Cancelar
+        </button>
+        <button style={styles.modalConfirm} onClick={handleLogout}>
+          Sí, salir
         </button>
       </div>
-    </aside>
+    </div>
+  </div>
+  )}
+    </>
   )
 }
 
@@ -110,4 +134,11 @@ const styles = {
   userName:     { fontSize: '13px', fontWeight: 500, color: 'var(--text)' },
   userRol:      { fontSize: '10px', color: 'var(--muted)', textTransform: 'capitalize' },
   logoutBtn:    { display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 20px', marginTop: '8px', background: 'none', border: 'none', color: 'var(--muted)', fontSize: '13px', width: '100%', cursor: 'pointer' },
+modalOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 },
+modalBox:     { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-lg)', padding: '28px', width: '260px' },
+modalTitle:   { fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: 'var(--text)' },
+modalDesc:    { fontSize: '13px', color: 'var(--muted2)', marginBottom: '20px' },
+modalBtns:    { display: 'flex', gap: '10px' },
+modalCancel:  { flex: 1, padding: '9px', background: 'none', border: '1px solid var(--border2)', borderRadius: '8px', color: 'var(--muted2)', fontSize: '13px', fontFamily: 'var(--sans)', cursor: 'pointer' },
+modalConfirm: { flex: 1, padding: '9px', background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '8px', color: '#f87171', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--sans)', cursor: 'pointer' },
 }

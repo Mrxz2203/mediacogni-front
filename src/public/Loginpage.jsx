@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import cogni from '../assets/cogni.png'
 import loginImg from '../assets/login.png'
 import { useAuth } from '../context/AuthContext'
 
+
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { login, user } = useAuth()
   const [form, setForm] = useState({ codigo: '', contrasena: '' })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
+  
+ if (user) return <Navigate to="/inicio" replace />
 
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value })
