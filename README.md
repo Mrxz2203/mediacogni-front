@@ -1,11 +1,12 @@
 # V-COGNI — Eye Tracking Cognitive Style Classifier
 
-Aplicación full-stack que identifica el estilo cognitivo de un estudiante (**Visual** o **Verbal**) combinando dos métodos:
+Aplicación full-stack que identifica el estilo cognitivo de un estudiante (**Visual** o **Verbal**) combinando **tres métodos**:
 
-1. **Cuestionario Felder-Silverman** — autoevaluación de 11 preguntas
-2. **Prueba biométrica** — seguimiento ocular en tiempo real (90 segundos) con MediaPipe + clasificación XGBoost
+1. **Cuestionario Felder-Silverman (F-S)** — autoevaluación de 11 preguntas (A/B)
+2. **Cuestionario OSIVQ** — 30 preguntas en escala Likert 1-5 (Object Imagery + Verbal)
+3. **Prueba biométrica** — seguimiento ocular en tiempo real (90 segundos) con MediaPipe + clasificación XGBoost
 
-Ambos resultados se cruzan automáticamente para validar la consistencia del perfil cognitivo detectado.
+Los tres resultados se cruzan automáticamente para validar la consistencia del perfil cognitivo detectado.
 
 ---
 
@@ -52,6 +53,7 @@ V-cogni-front/                   ← Frontend
     │   ├── Home.jsx
     │   ├── Profile.jsx
     │   ├── Cuestionario.jsx
+    │   ├── CuestionarioOSIVQ.jsx
     │   ├── Historial.jsx
     │   └── NotFound.jsx
     └── pages/sistema/
@@ -95,8 +97,8 @@ pnpm run dev
 
 | Rol | Acceso |
 |---|---|
-| `estudiante` | Inicio, Perfil, Cuestionario, Sistema (prueba biométrica), Historial |
-| `admin` | Inicio, Perfil, Gestionar Usuarios (con vista de resultados de cada estudiante) |
+| `estudiante` | Inicio, Perfil, Cuestionario F-S, OSIVQ, Sistema (prueba biométrica), Historial |
+| `admin` | Inicio, Perfil, Gestionar Usuarios (con vista de resultados y evolución de cada estudiante) |
 
 ### Crear el primer usuario admin
 
@@ -115,23 +117,51 @@ pnpm run dev
 ## Flujo del estudiante
 
 ```
-Registro → Login → Cuestionario F-S → Prueba biométrica (90s) → Historial con validación cruzada
+Registro → Login → Cuestionario F-S → Cuestionario OSIVQ → Prueba biométrica (90s) → Historial con validación cruzada
 ```
 
-**Reglas importantes:**
+**Reglas de bloqueo (Opción A — ambos obligatorios):**
 
-- El **Cuestionario** se puede responder **múltiples veces** (cada envío crea un nuevo registro con su propia fecha, no se sobreescribe).
-- La **prueba biométrica** se bloquea si la última sesión registrada es más reciente que el cuestionario vigente — esto obliga a que el orden siempre sea *cuestionario → biométrico → cuestionario → biométrico*, nunca dos biométricos seguidos sin actualizar el cuestionario.
-- En el **Historial**, cada sesión biométrica se valida contra el cuestionario que estaba vigente **en el momento en que se realizó esa sesión** (no contra el cuestionario actual). Esto evita que un cuestionario nuevo "contamine" retroactivamente sesiones pasadas.
+- Sin **F-S** → OSIVQ bloqueado y Sistema bloqueado
+- Con **F-S** pero sin **OSIVQ** → Sistema bloqueado
+- Con **ambos cuestionarios** → acceso a la prueba biométrica ✅
+- Al dar "Responder de nuevo" en el **F-S** → `cuestionarioCompletado` se limpia en el contexto → OSIVQ y Sistema se bloquean automáticamente
+- Al dar "Responder de nuevo" en el **OSIVQ** → tanto `osivqCompletado` como `cuestionarioCompletado` se limpian → obliga a rehacer el flujo completo desde el F-S
 
-### Reglas de validación cruzada
+**Reglas de historial:**
+
+- Cada cuestionario (F-S y OSIVQ) crea un **nuevo registro** en la BD con su propia fecha — nunca se sobreescribe.
+- La prueba biométrica se bloquea si la última sesión es más reciente que cualquiera de los dos cuestionarios.
+- En el Historial, cada sesión se valida contra los cuestionarios **vigentes en el momento en que se realizó** (no contra los actuales), evitando que cuestionarios nuevos contaminen sesiones pasadas.
+
+---
+
+## Cuestionario OSIVQ
+
+Basado en el cuestionario **Object-Spatial Imagery and Verbal (OSIVQ)** de Blajenkova et al. Se usan solo las dimensiones **Object** (Visual) y **Verbal** — 15 ítems cada una, 30 en total.
+
+**Scoring:**
+- Escala Likert 1-5 por ítem
+- Ítems invertidos (carga negativa): Object → 10, 25 / Verbal → 24, 38 → se aplica `6 - valor`
+- Puntaje máximo por dimensión: 75
+- Umbral de empate: `|puntaje_object - puntaje_verbal| <= 5` → Balanceado
+
+**Ítems Object (Visual):** 6, 10*, 11, 13, 18, 20, 23, 25*, 26, 29, 33, 34, 40, 43, 45
+
+**Ítems Verbal:** 2, 4, 8, 9, 16, 19, 21, 24*, 28, 35, 36, 37, 38*, 39, 41
+
+*Ítems invertidos
+
+---
+
+## Reglas de validación cruzada (3 métodos)
 
 | Condición | Veredicto |
 |---|---|
-| Cuestionario Verbal + biométrico con confianza < 60% | ❌ Resultado descartado |
-| Ambos métodos coinciden | ✅ Confirmado con alta confianza |
-| Cuestionario Balanceado + biométrico define un perfil | 📊 Perfil definido por biométrico |
-| Cuestionario y biométrico no coinciden | ⚠️ Discrepancia leve |
+| Biométrico con confianza < 60% | ❌ Resultado descartado |
+| Los 3 métodos coinciden | ✅ Confirmado con alta confianza |
+| Algunos coinciden con el biométrico | 📊 Coincidencia parcial |
+| Ningún cuestionario coincide con el biométrico | ⚠️ Discrepancia |
 
 ---
 
@@ -154,23 +184,18 @@ Registro → Login → Cuestionario F-S → Prueba biométrica (90s) → Histori
 | PUT  | `/usuarios/me/update` | Actualizar perfil |
 | POST | `/clasificar` | Enviar métricas de gaze y clasificar sesión (XGBoost) |
 | GET  | `/sesiones/me` | Historial de sesiones del usuario |
-| POST | `/cuestionario` | Crear un nuevo registro de cuestionario F-S |
-| GET  | `/cuestionario/me` | Cuestionario más reciente del usuario |
-| GET  | `/cuestionario/historial` | Todos los cuestionarios del usuario (para validación cruzada por fecha) |
+| POST | `/cuestionario` | Crear nuevo registro de cuestionario F-S |
+| GET  | `/cuestionario/me` | Cuestionario F-S más reciente del usuario |
+| GET  | `/cuestionario/historial` | Todos los cuestionarios F-S del usuario |
+| POST | `/cuestionario-osivq` | Crear nuevo registro de cuestionario OSIVQ |
+| GET  | `/cuestionario-osivq/me` | Cuestionario OSIVQ más reciente del usuario |
+| GET  | `/cuestionario-osivq/historial` | Todos los cuestionarios OSIVQ del usuario |
 | GET  | `/admin/usuarios` | Listar todos los usuarios (admin) |
 | PUT/DELETE | `/admin/usuarios/{id}` | Editar / eliminar usuario (admin) |
 | GET  | `/admin/sesiones/total` | Total de sesiones de todos los usuarios (admin) |
 | GET  | `/admin/usuarios/{id}/sesiones` | Sesiones de un estudiante específico (admin) |
-| GET  | `/admin/usuarios/{id}/cuestionarios` | Historial de cuestionarios de un estudiante (admin) |
-
----
-
-## Próximos pasos / ideas pendientes
-
-- Integrar un **segundo cuestionario** (en curso)
-- Tests automatizados para la lógica de validación cruzada
-- Manejo de errores de red más robusto (mensaje claro si el backend está caído)
-- Debounce en el buscador de Gestión de Usuarios
+| GET  | `/admin/usuarios/{id}/cuestionarios` | Historial F-S de un estudiante (admin) |
+| GET  | `/admin/usuarios/{id}/cuestionarios-osivq` | Historial OSIVQ de un estudiante (admin) |
 
 ---
 
