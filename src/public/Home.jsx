@@ -21,15 +21,15 @@ export default function Home() {
             Bienvenido, {user?.nombre?.split(' ')[0] ?? 'usuario'} 👋
           </h2>
           <p style={styles.desc}>
-            V-COGNI identifica tu estilo cognitivo (visual o verbal) mediante
-            seguimiento ocular en tiempo real. El proceso dura 90 segundos
-            y usa tu cámara web estándar.
+            V-COGNI identifica tu estilo cognitivo (visual o verbal) combinando tres métodos: 
+el Cuestionario Felder-Silverman, el Cuestionario OSIVQ y seguimiento ocular en 
+tiempo real de 90 segundos con tu cámara web estándar.
           </p>
 
           {/* Botón solo para estudiantes */}
           {!isAdmin && (
-            <button style={styles.btn} onClick={() => navigate('/sistema')}>
-              Ir al sistema
+            <button style={styles.btn} onClick={() => navigate('/cuestionario')}>
+              Ir al Cuestionario F-S
               <ArrowIcon />
             </button>
           )}
@@ -58,8 +58,8 @@ export default function Home() {
 }
 
 const CARDS = [
-  { img: ocularImg,     label: 'Seguimiento ocular',      desc: 'MediaPipe detecta landmarks faciales en tiempo real' },
-  { img: clasiImg,      label: 'Clasificación cognitiva',  desc: 'XGBoost clasifica tu perfil: Visual o Verbal' },
+  { img: ocularImg,     label: 'Cuestionarios',      desc: 'F-S + OSIVQ para evaluar tu perfil' },
+  { img: clasiImg,      label: 'Prueba Biométrica',  desc: 'XGBoost clasifica tu perfil: Visual o Verbal' },
   { img: resultadosImg, label: 'Resultados',               desc: 'Revisa tu historial y evolución en el tiempo' },
 ]
 
