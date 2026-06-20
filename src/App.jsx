@@ -14,6 +14,7 @@ import LiveSession         from './pages/sistema/LiveSession'
 import AdminDashboardPage  from './pages/sistema/admin/AdminDashboardPage'
 import GestionUsuariosPage from './pages/sistema/admin/GestionUsuariosPage'
 import NotFound from './public/NotFound'
+import CuestionarioOSIVQ from './public/CuestionarioOSIVQ'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/inicio"         element={<Home />} />
           <Route path="/perfil"         element={<Profile />} />
           <Route path="/cuestionario"   element={<Cuestionario />} />
+          <Route path="/cuestionario-osivq" element={<CuestionarioOSIVQ />} />
           <Route path="/sistema"        element={<Sistema />} />
           <Route path="/sistema/sesion" element={<LiveSession />} />
           <Route path="/historial"      element={<Historial />} />

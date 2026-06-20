@@ -1,69 +1,93 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 
-// ── Buscar el cuestionario vigente para una sesión ────────────────────────────
-// Devuelve el cuestionario más reciente cuya fecha sea ANTERIOR a la sesión
-function getCuestionarioVigente(cuestionarios, fechaSesion) {
+// ── Buscar cuestionario vigente para una sesión (por fecha) ───────────────────
+function getVigente(lista, fechaSesion) {
   const fecha = new Date(fechaSesion)
-  const anteriores = cuestionarios.filter(q => new Date(q.fecha) <= fecha)
+  const anteriores = lista.filter(q => new Date(q.fecha) <= fecha)
   if (anteriores.length === 0) return null
-  // El más reciente de los anteriores
   return anteriores.reduce((a, b) => new Date(a.fecha) > new Date(b.fecha) ? a : b)
 }
 
-// ── Lógica de validación cruzada ──────────────────────────────────────────────
-function validarCruzado(resultadoCuestionario, estiloBiometrico, confianza) {
-  if (!resultadoCuestionario || !estiloBiometrico) return null
+// ── Validación cruzada de 3 métodos ──────────────────────────────────────────
+function validarTresMedodos(resultadoFS, resultadoOSIVQ, estiloBiometrico, confianza) {
+  if (!estiloBiometrico) return null
 
-  const confianzaPct = Math.round((confianza ?? 0) * 100)
+  const confianzaPct       = Math.round((confianza ?? 0) * 100)
   const biometricoIncierto = confianzaPct < 60
 
-  if (resultadoCuestionario === 'Verbal' && biometricoIncierto) {
+  // Sin ningún cuestionario
+  if (!resultadoFS && !resultadoOSIVQ) return null
+
+  // Contar cuántos coinciden con el biométrico
+  const resultados = [resultadoFS, resultadoOSIVQ].filter(Boolean)
+  const coinciden  = resultados.filter(r => r === estiloBiometrico || r === 'Balanceado').length
+  const total      = resultados.length
+
+  // Biométrico incierto
+  if (biometricoIncierto) {
     return {
-      estado: 'descartado', icono: '❌', label: 'Resultado descartado',
-      desc: 'El cuestionario indica perfil Verbal pero la prueba biométrica no fue concluyente.',
+      icono: '❌', label: 'Resultado descartado',
+      desc: 'La prueba biométrica no fue concluyente (confianza < 60%). Se recomienda repetir la prueba.',
       color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.25)',
     }
   }
-  if (resultadoCuestionario === estiloBiometrico) {
+
+  // Todos coinciden
+  if (coinciden === total) {
     return {
-      estado: 'confirmado', icono: '✅', label: 'Confirmado con alta confianza',
-      desc: `Ambos métodos coinciden en perfil ${estiloBiometrico}.`,
+      icono: '✅', label: 'Confirmado con alta confianza',
+      desc: `Los ${total > 1 ? 'cuestionarios coinciden' : 'cuestionario coincide'} con la prueba biométrica: perfil ${estiloBiometrico}.`,
       color: 'var(--accent)', bg: 'rgba(0,212,170,0.08)', border: 'rgba(0,212,170,0.25)',
     }
   }
-  if (resultadoCuestionario === 'Balanceado') {
+
+  // Mayoría coincide
+  if (coinciden > 0) {
     return {
-      estado: 'aceptado', icono: '📊', label: 'Perfil definido por biométrico',
-      desc: `El cuestionario indicó perfil Balanceado. La prueba biométrica clasificó como ${estiloBiometrico}.`,
+      icono: '📊', label: 'Coincidencia parcial',
+      desc: `${coinciden} de ${total} cuestionarios coinciden con el resultado biométrico (${estiloBiometrico}).`,
       color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.25)',
     }
   }
+
+  // Ninguno coincide
   return {
-    estado: 'discrepancia', icono: '⚠️', label: 'Discrepancia leve',
-    desc: `El cuestionario indica ${resultadoCuestionario} pero la prueba biométrica clasificó como ${estiloBiometrico}. Se recomienda repetir la prueba.`,
+    icono: '⚠️', label: 'Discrepancia',
+    desc: `Los cuestionarios y la prueba biométrica (${estiloBiometrico}) no coinciden. Se recomienda repetir el proceso.`,
     color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.25)',
   }
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Historial() {
-  const { getMisSesiones, getHistorialCuestionarios, cuestionarioCompletado, user } = useAuth()
-  const [sesiones,       setSesiones]       = useState([])
-  const [cuestionarios,  setCuestionarios]  = useState([])
-  const [loading,        setLoading]        = useState(true)
-  const [error,          setError]          = useState('')
-  const [expandido,      setExpandido]      = useState(null)
+  const {
+    getMisSesiones,
+    getHistorialCuestionarios,
+    getHistorialOSIVQ,
+    cuestionarioCompletado,
+    osivqCompletado,
+    user,
+  } = useAuth()
+
+  const [sesiones,      setSesiones]      = useState([])
+  const [cuestionarios, setCuestionarios] = useState([])
+  const [osivqs,        setOsivqs]        = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState('')
+  const [expandido,     setExpandido]     = useState(null)
 
   useEffect(() => {
     const cargar = async () => {
       try {
-        const [ses, qs] = await Promise.all([
+        const [ses, qs, os] = await Promise.all([
           getMisSesiones(),
           getHistorialCuestionarios(),
+          getHistorialOSIVQ(),
         ])
         setSesiones(ses)
         setCuestionarios(qs)
+        setOsivqs(os)
       } catch {
         setError('No se pudo cargar el historial.')
       } finally {
@@ -73,15 +97,8 @@ export default function Historial() {
     cargar()
   }, [])
 
-  const formatFecha = (iso) => {
-    const d = new Date(iso)
-    return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
-  }
-
-  const formatHora = (iso) => {
-    const d = new Date(iso)
-    return d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
-  }
+  const formatFecha = (iso) => new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  const formatHora  = (iso) => new Date(iso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
 
   return (
     <div style={s.container}>
@@ -112,24 +129,31 @@ export default function Historial() {
         </div>
       </div>
 
-      {/* Banner cuestionario más reciente */}
-      {cuestionarioCompletado && (
-        <div style={s.qBanner}>
-          <span style={s.qBannerIcon}>📝</span>
-          <div>
-            <span style={s.qBannerLabel}>Cuestionario F-S actual — </span>
-            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>
-              {cuestionarioCompletado.resultado}
-            </span>
-            <span style={s.qBannerPuntaje}>
-              {' '}(puntaje: {cuestionarioCompletado.puntaje > 0 ? '+' : ''}{cuestionarioCompletado.puntaje})
-            </span>
-            {cuestionarios.length > 1 && (
-              <span style={s.qBannerCount}> · {cuestionarios.length} cuestionarios en historial</span>
-            )}
+      {/* Banners de cuestionarios actuales */}
+      <div style={s.bannersWrap}>
+        {cuestionarioCompletado && (
+          <div style={s.qBanner}>
+            <span>📝</span>
+            <div>
+              <span style={s.qBannerLabel}>F-S actual — </span>
+              <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{cuestionarioCompletado.resultado}</span>
+              <span style={s.qBannerSub}> (puntaje: {cuestionarioCompletado.puntaje > 0 ? '+' : ''}{cuestionarioCompletado.puntaje})</span>
+              {cuestionarios.length > 1 && <span style={s.qBannerSub}> · {cuestionarios.length} registros</span>}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        {osivqCompletado && (
+          <div style={s.qBanner}>
+            <span>📋</span>
+            <div>
+              <span style={s.qBannerLabel}>OSIVQ actual — </span>
+              <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{osivqCompletado.resultado}</span>
+              <span style={s.qBannerSub}> (V.Obj: {osivqCompletado.puntaje_object} · Verb: {osivqCompletado.puntaje_verbal})</span>
+              {osivqs.length > 1 && <span style={s.qBannerSub}> · {osivqs.length} registros</span>}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Content */}
       {loading ? (
@@ -145,10 +169,10 @@ export default function Historial() {
       ) : (
         <div style={s.list}>
           {sesiones.map((ses, i) => {
-            // Buscar el cuestionario vigente en el momento de ESTA sesión
-            const qVigente  = getCuestionarioVigente(cuestionarios, ses.fecha)
-            const validacion = validarCruzado(qVigente?.resultado, ses.estilo_cognitivo, ses.confianza)
-            const abierto    = expandido === ses.id
+            const qFS    = getVigente(cuestionarios, ses.fecha)
+            const qOSIVQ = getVigente(osivqs, ses.fecha)
+            const validacion = validarTresMedodos(qFS?.resultado, qOSIVQ?.resultado, ses.estilo_cognitivo, ses.confianza)
+            const abierto = expandido === ses.id
 
             return (
               <div key={ses.id} style={s.card}>
@@ -163,9 +187,9 @@ export default function Historial() {
 
                   <div style={{
                     ...s.styleBadge,
-                    background:   ses.estilo_cognitivo === 'Visual' ? 'rgba(0,212,170,0.1)' : ses.estilo_cognitivo === 'Verbal' ? 'rgba(59,130,246,0.1)' : 'var(--surface2)',
-                    color:        ses.estilo_cognitivo === 'Visual' ? 'var(--accent)'        : ses.estilo_cognitivo === 'Verbal' ? 'var(--accent2)'       : 'var(--muted)',
-                    borderColor:  ses.estilo_cognitivo === 'Visual' ? 'rgba(0,212,170,0.3)'  : ses.estilo_cognitivo === 'Verbal' ? 'rgba(59,130,246,0.3)' : 'var(--border)',
+                    background:  ses.estilo_cognitivo === 'Visual' ? 'rgba(0,212,170,0.1)' : ses.estilo_cognitivo === 'Verbal' ? 'rgba(59,130,246,0.1)' : 'var(--surface2)',
+                    color:       ses.estilo_cognitivo === 'Visual' ? 'var(--accent)'        : ses.estilo_cognitivo === 'Verbal' ? 'var(--accent2)'       : 'var(--muted)',
+                    borderColor: ses.estilo_cognitivo === 'Visual' ? 'rgba(0,212,170,0.3)'  : ses.estilo_cognitivo === 'Verbal' ? 'rgba(59,130,246,0.3)' : 'var(--border)',
                   }}>
                     {ses.estilo_cognitivo ?? 'Pendiente'}
                   </div>
@@ -186,7 +210,6 @@ export default function Historial() {
 
                   <div style={s.rowMeta}>{ses.duracion}s</div>
 
-                  {/* Badge validación o sin cuestionario */}
                   {validacion ? (
                     <button
                       style={{ ...s.validBadge, background: validacion.bg, border: `1px solid ${validacion.border}`, color: validacion.color }}
@@ -197,43 +220,63 @@ export default function Historial() {
                       <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.7 }}>{abierto ? '▲' : '▼'}</span>
                     </button>
                   ) : (
-                    <div style={s.sinQBadge}>Sin cuestionario previo</div>
+                    <div style={s.sinQBadge}>Sin cuestionarios previos</div>
                   )}
                 </div>
 
-                {/* Panel expandible */}
+                {/* Panel expandible — 3 métodos */}
                 {validacion && abierto && (
                   <div style={{ ...s.validPanel, borderColor: validacion.border }}>
                     <div style={s.validGrid}>
+
+                      {/* F-S */}
                       <div style={s.validCol}>
-                        <div style={s.validColLabel}>📝 Cuestionario F-S vigente</div>
-                        <div style={{ ...s.validColVal, color: validacion.color }}>
-                          {qVigente?.resultado}
-                        </div>
-                        <div style={s.validColSub}>
-                          Puntaje: {qVigente?.puntaje > 0 ? '+' : ''}{qVigente?.puntaje}
-                        </div>
-                        <div style={{ ...s.validColSub, marginTop: '4px' }}>
-                          Fecha: {formatFecha(qVigente?.fecha)}
-                        </div>
+                        <div style={s.validColLabel}>📝 Cuestionario F-S</div>
+                        {qFS ? (
+                          <>
+                            <div style={{ ...s.validColVal, color: qFS.resultado === 'Visual' ? 'var(--accent)' : qFS.resultado === 'Verbal' ? '#818cf8' : '#fbbf24' }}>
+                              {qFS.resultado}
+                            </div>
+                            <div style={s.validColSub}>Puntaje: {qFS.puntaje > 0 ? '+' : ''}{qFS.puntaje}</div>
+                            <div style={{ ...s.validColSub, marginTop: '4px' }}>Fecha: {formatFecha(qFS.fecha)}</div>
+                          </>
+                        ) : (
+                          <div style={s.sinDatos}>Sin registro</div>
+                        )}
+                      </div>
+
+                      <div style={s.validSep}>+</div>
+
+                      {/* OSIVQ */}
+                      <div style={s.validCol}>
+                        <div style={s.validColLabel}>📋 Cuestionario OSIVQ</div>
+                        {qOSIVQ ? (
+                          <>
+                            <div style={{ ...s.validColVal, color: qOSIVQ.resultado === 'Visual' ? 'var(--accent)' : qOSIVQ.resultado === 'Verbal' ? '#818cf8' : '#fbbf24' }}>
+                              {qOSIVQ.resultado}
+                            </div>
+                            <div style={s.validColSub}>V.Obj: {qOSIVQ.puntaje_object} · Verb: {qOSIVQ.puntaje_verbal}</div>
+                            <div style={{ ...s.validColSub, marginTop: '4px' }}>Fecha: {formatFecha(qOSIVQ.fecha)}</div>
+                          </>
+                        ) : (
+                          <div style={s.sinDatos}>Sin registro</div>
+                        )}
                       </div>
 
                       <div style={s.validSep}>vs</div>
 
+                      {/* Biométrico */}
                       <div style={s.validCol}>
                         <div style={s.validColLabel}>👁️ Prueba biométrica</div>
                         <div style={{ ...s.validColVal, color: ses.estilo_cognitivo === 'Visual' ? 'var(--accent)' : 'var(--accent2)' }}>
                           {ses.estilo_cognitivo}
                         </div>
-                        <div style={s.validColSub}>
-                          Confianza: {Math.round((ses.confianza ?? 0) * 100)}%
-                        </div>
-                        <div style={{ ...s.validColSub, marginTop: '4px' }}>
-                          Fecha: {formatFecha(ses.fecha)}
-                        </div>
+                        <div style={s.validColSub}>Confianza: {Math.round((ses.confianza ?? 0) * 100)}%</div>
+                        <div style={{ ...s.validColSub, marginTop: '4px' }}>Fecha: {formatFecha(ses.fecha)}</div>
                       </div>
                     </div>
 
+                    {/* Veredicto final */}
                     <div style={{ ...s.veredicto, background: validacion.bg, borderColor: validacion.border }}>
                       <span style={{ fontSize: '16px' }}>{validacion.icono}</span>
                       <div>
@@ -257,46 +300,46 @@ export default function Historial() {
 }
 
 const s = {
-  container: { display: 'flex', flexDirection: 'column', gap: '24px' },
-  header:    { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' },
-  tag:       { display: 'inline-block', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '100px', padding: '4px 12px', letterSpacing: '0.08em', marginBottom: '8px' },
-  subtitle:  { fontSize: '14px', color: 'var(--muted)', margin: 0 },
-  statsRow:  { display: 'flex', gap: '12px' },
-  statCard:  { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 20px', textAlign: 'center', minWidth: '70px' },
-  statVal:   { fontSize: '22px', fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--text)' },
-  statLabel: { fontSize: '11px', color: 'var(--muted)', marginTop: '2px' },
+  container:  { display: 'flex', flexDirection: 'column', gap: '24px' },
+  header:     { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' },
+  tag:        { display: 'inline-block', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '100px', padding: '4px 12px', letterSpacing: '0.08em', marginBottom: '8px' },
+  subtitle:   { fontSize: '14px', color: 'var(--muted)', margin: 0 },
+  statsRow:   { display: 'flex', gap: '12px' },
+  statCard:   { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 20px', textAlign: 'center', minWidth: '70px' },
+  statVal:    { fontSize: '22px', fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--text)' },
+  statLabel:  { fontSize: '11px', color: 'var(--muted)', marginTop: '2px' },
 
-  qBanner:       { display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '8px', padding: '10px 16px', fontSize: '13px', color: 'var(--muted2)' },
-  qBannerIcon:   { fontSize: '16px' },
-  qBannerLabel:  { color: 'var(--muted)' },
-  qBannerPuntaje:{ color: 'var(--muted)', fontSize: '12px' },
-  qBannerCount:  { color: 'var(--muted)', fontSize: '12px', fontStyle: 'italic' },
+  bannersWrap: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  qBanner:     { display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.2)', borderRadius: '8px', padding: '10px 16px', fontSize: '13px', color: 'var(--muted2)' },
+  qBannerLabel:{ color: 'var(--muted)' },
+  qBannerSub:  { color: 'var(--muted)', fontSize: '12px' },
 
-  list:      { display: 'flex', flexDirection: 'column', gap: '8px' },
-  card:      { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' },
-  row:       { display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', flexWrap: 'wrap' },
-  rowNum:    { fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--muted)', minWidth: '28px' },
-  rowDate:   { fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--text)', minWidth: '100px' },
-  rowHora:   { fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--muted)' },
-  styleBadge:{ fontSize: '12px', fontWeight: 600, border: '1px solid', borderRadius: '100px', padding: '4px 14px', whiteSpace: 'nowrap' },
-  confWrap:  { flex: 1, display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px' },
-  confLabel: { fontSize: '11px', color: 'var(--muted)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' },
-  confBar:   { flex: 1, height: '4px', background: 'var(--surface2)', borderRadius: '4px', overflow: 'hidden' },
-  confFill:  { height: '100%', borderRadius: '4px', transition: 'width 0.4s' },
-  confPct:   { fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--text)', minWidth: '36px', textAlign: 'right' },
-  rowMeta:   { fontSize: '12px', color: 'var(--muted)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' },
+  list:       { display: 'flex', flexDirection: 'column', gap: '8px' },
+  card:       { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' },
+  row:        { display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', flexWrap: 'wrap' },
+  rowNum:     { fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--muted)', minWidth: '28px' },
+  rowDate:    { fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--text)', minWidth: '100px' },
+  rowHora:    { fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--muted)' },
+  styleBadge: { fontSize: '12px', fontWeight: 600, border: '1px solid', borderRadius: '100px', padding: '4px 14px', whiteSpace: 'nowrap' },
+  confWrap:   { flex: 1, display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px' },
+  confLabel:  { fontSize: '11px', color: 'var(--muted)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' },
+  confBar:    { flex: 1, height: '4px', background: 'var(--surface2)', borderRadius: '4px', overflow: 'hidden' },
+  confFill:   { height: '100%', borderRadius: '4px', transition: 'width 0.4s' },
+  confPct:    { fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--text)', minWidth: '36px', textAlign: 'right' },
+  rowMeta:    { fontSize: '12px', color: 'var(--muted)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' },
 
   validBadge: { display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--sans)', whiteSpace: 'nowrap' },
   sinQBadge:  { fontSize: '11px', color: 'var(--muted)', fontStyle: 'italic', padding: '6px 12px' },
 
-  validPanel: { borderTop: '1px solid', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' },
-  validGrid:  { display: 'flex', alignItems: 'center', gap: '24px' },
-  validCol:   { flex: 1, textAlign: 'center' },
+  validPanel:    { borderTop: '1px solid', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' },
+  validGrid:     { display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' },
+  validCol:      { flex: 1, textAlign: 'center', minWidth: '100px' },
   validColLabel: { fontSize: '11px', color: 'var(--muted)', marginBottom: '6px', fontFamily: 'var(--mono)' },
   validColVal:   { fontSize: '18px', fontWeight: 700, marginBottom: '4px' },
   validColSub:   { fontSize: '11px', color: 'var(--muted)' },
-  validSep:   { fontSize: '12px', color: 'var(--muted)', fontFamily: 'var(--mono)', flexShrink: 0 },
-  veredicto:  { display: 'flex', alignItems: 'flex-start', gap: '12px', border: '1px solid', borderRadius: '8px', padding: '14px 16px' },
+  validSep:      { fontSize: '12px', color: 'var(--muted)', fontFamily: 'var(--mono)', flexShrink: 0, paddingTop: '30px' },
+  sinDatos:      { fontSize: '12px', color: 'var(--muted)', fontStyle: 'italic' },
+  veredicto:     { display: 'flex', alignItems: 'flex-start', gap: '12px', border: '1px solid', borderRadius: '8px', padding: '14px 16px' },
 
   empty:      { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '60px', textAlign: 'center', color: 'var(--muted)' },
   emptyIcon:  { fontSize: '40px', marginBottom: '16px' },

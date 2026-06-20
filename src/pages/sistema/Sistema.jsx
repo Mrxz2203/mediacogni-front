@@ -8,7 +8,7 @@ import pythonImg   from '../../assets/python.png'
 export default function Sistema() {
   const [showModal, setShowModal] = useState(false)
   const navigate = useNavigate()
-  const { cuestionarioCompletado, getMisSesiones } = useAuth()
+  const { cuestionarioCompletado, osivqCompletado, getMisSesiones } = useAuth()
   const [sesiones, setSesiones] = useState(null)
   const [loadingSesiones, setLoadingSesiones] = useState(false)
 
@@ -22,44 +22,59 @@ export default function Sistema() {
   }, [])
 
   // ── Lógica de acceso ──────────────────────────────────────────────────────
-  // Caso 1: no hay cuestionario en absoluto
+
+  // Caso 1: no hay cuestionario F-S
   if (!cuestionarioCompletado) {
-    return <PantallaBloqueo navigate={navigate} mensaje="primero" />
+    return <PantallaBloqueo navigate={navigate} mensaje="falta_fs" />
   }
 
-  // Mientras carga las sesiones, no mostrar nada aún
+  // Caso 2: no hay cuestionario OSIVQ
+  if (!osivqCompletado) {
+    return <PantallaBloqueo navigate={navigate} mensaje="falta_osivq" />
+  }
+
+  // Mientras carga las sesiones
   if (loadingSesiones || sesiones === null) {
     return <div style={{ padding: '40px', color: 'var(--muted)', textAlign: 'center' }}>Cargando...</div>
   }
 
-  // Caso 2: hay sesiones biométricas más recientes que el cuestionario
-  // → el usuario hizo la prueba, luego eligió "responder de nuevo" el cuestionario
-  //   pero AÚN NO lo ha enviado (cuestionarioCompletado.fecha es la del cuestionario anterior)
-  // Para detectar esto comparamos fecha del cuestionario vs fecha de la sesión más reciente
+  // Caso 3: hay sesiones más recientes que alguno de los cuestionarios
   if (sesiones.length > 0) {
-    const fechaCuestionario = new Date(cuestionarioCompletado.fecha)
-    const fechaUltimaSesion = new Date(sesiones[0].fecha) // ya viene ordenado desc
-    if (fechaUltimaSesion > fechaCuestionario) {
+    const fechaUltimaSesion = new Date(sesiones[0].fecha)
+    const fechaFS    = new Date(cuestionarioCompletado.fecha)
+    const fechaOSIVQ = new Date(osivqCompletado.fecha)
+
+    if (fechaUltimaSesion > fechaFS || fechaUltimaSesion > fechaOSIVQ) {
       return <PantallaBloqueo navigate={navigate} mensaje="actualizar" />
     }
   }
 
-  // ── Vista normal: cuestionario más reciente que la última sesión ───────────
+  // ── Vista normal: ambos cuestionarios más recientes que la última sesión ──
   return (
     <>
       <div style={styles.container}>
         <div style={styles.tag}>V-COGNI · Clasificador cognitivo</div>
 
-        {/* Badge cuestionario completado */}
-        <div style={styles.qBadge}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20,6 9,17 4,12"/>
-          </svg>
-          <span>
-            Cuestionario F-S completado — Perfil:{' '}
-            <strong style={{ color: 'var(--accent)' }}>{cuestionarioCompletado.resultado}</strong>
-            {' '}(puntaje: {cuestionarioCompletado.puntaje > 0 ? '+' : ''}{cuestionarioCompletado.puntaje})
-          </span>
+        {/* Badges de cuestionarios completados */}
+        <div style={styles.badgesRow}>
+          <div style={styles.qBadge}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+            <span>
+              F-S: <strong style={{ color: 'var(--accent)' }}>{cuestionarioCompletado.resultado}</strong>
+              {' '}({cuestionarioCompletado.puntaje > 0 ? '+' : ''}{cuestionarioCompletado.puntaje})
+            </span>
+          </div>
+          <div style={styles.qBadge}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+            <span>
+              OSIVQ: <strong style={{ color: 'var(--accent)' }}>{osivqCompletado.resultado}</strong>
+              {' '}(V.Obj: {osivqCompletado.puntaje_object} · Verb: {osivqCompletado.puntaje_verbal})
+            </span>
+          </div>
         </div>
 
         {/* Main intro card */}
@@ -144,13 +159,43 @@ export default function Sistema() {
 
 // ── Pantalla de bloqueo reutilizable ─────────────────────────────────────────
 function PantallaBloqueo({ navigate, mensaje }) {
-  const esPrimera   = mensaje === 'primero'
-  const titulo      = esPrimera
-    ? 'Primero completa el cuestionario'
-    : 'Actualiza tu cuestionario antes de continuar'
-  const descripcion = esPrimera
-    ? 'Para acceder a la prueba biométrica, debes completar primero el Cuestionario Felder-Silverman. Este paso es necesario para validar tu perfil cognitivo con ambos métodos.'
-    : 'Ya realizaste una prueba biométrica después de tu último cuestionario. Para volver a hacer la prueba, debes completar el cuestionario nuevamente para que la validación cruzada sea válida.'
+  const config = {
+    falta_fs: {
+      titulo:      'Primero completa el Cuestionario F-S',
+      descripcion: 'Para acceder a la prueba biométrica, debes completar primero el Cuestionario Felder-Silverman (11 preguntas).',
+      pasos: [
+        { num: 1, titulo: 'Cuestionario F-S',   desc: '11 preguntas sobre tu estilo de aprendizaje', activo: true },
+        { num: 2, titulo: 'Cuestionario OSIVQ', desc: '30 preguntas sobre tu estilo de procesamiento', activo: false },
+        { num: 3, titulo: 'Prueba biométrica',  desc: '90 segundos de eye-tracking con tu cámara', activo: false },
+      ],
+      btnLabel: 'Ir al Cuestionario F-S →',
+      btnRuta:  '/cuestionario',
+    },
+    falta_osivq: {
+      titulo:      'Ahora completa el Cuestionario OSIVQ',
+      descripcion: 'Ya completaste el F-S. El siguiente paso es el Cuestionario OSIVQ (30 preguntas) antes de la prueba biométrica.',
+      pasos: [
+        { num: 1, titulo: 'Cuestionario F-S',   desc: '11 preguntas sobre tu estilo de aprendizaje', activo: false, completado: true },
+        { num: 2, titulo: 'Cuestionario OSIVQ', desc: '30 preguntas sobre tu estilo de procesamiento', activo: true },
+        { num: 3, titulo: 'Prueba biométrica',  desc: '90 segundos de eye-tracking con tu cámara', activo: false },
+      ],
+      btnLabel: 'Ir al Cuestionario OSIVQ →',
+      btnRuta:  '/cuestionario-osivq',
+    },
+    actualizar: {
+      titulo:      'Actualiza tus cuestionarios antes de continuar',
+      descripcion: 'Ya realizaste una prueba biométrica. Para volver a hacer la prueba, debes completar ambos cuestionarios nuevamente.',
+      pasos: [
+        { num: 1, titulo: 'Cuestionario F-S',   desc: '11 preguntas sobre tu estilo de aprendizaje', activo: true },
+        { num: 2, titulo: 'Cuestionario OSIVQ', desc: '30 preguntas sobre tu estilo de procesamiento', activo: false },
+        { num: 3, titulo: 'Prueba biométrica',  desc: '90 segundos de eye-tracking con tu cámara', activo: false },
+      ],
+      btnLabel: 'Actualizar Cuestionario F-S →',
+      btnRuta:  '/cuestionario',
+    },
+  }
+
+  const c = config[mensaje]
 
   return (
     <div style={styles.container}>
@@ -162,29 +207,33 @@ function PantallaBloqueo({ navigate, mensaje }) {
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
         </div>
-        <h2 style={styles.heroTitle}>{titulo}</h2>
-        <p style={styles.heroDesc}>{descripcion}</p>
+        <h2 style={styles.heroTitle}>{c.titulo}</h2>
+        <p style={styles.heroDesc}>{c.descripcion}</p>
 
         <div style={styles.bloqPasos}>
-          <div style={styles.bloqPaso}>
-            <div style={{ ...styles.stepNum, background: 'var(--accent)', color: '#020c08' }}>1</div>
-            <div>
-              <div style={styles.stepTitle}>Cuestionario F-S</div>
-              <div style={styles.stepDesc}>11 preguntas sobre tu estilo de aprendizaje</div>
+          {c.pasos.map((p, i) => (
+            <div key={p.num}>
+              {i > 0 && <div style={styles.bloqFlecha}>↓</div>}
+              <div style={styles.bloqPaso}>
+                <div style={{
+                  ...styles.stepNum,
+                  ...(p.completado ? { background: 'var(--accent)', color: '#020c08' } : {}),
+                  ...(p.activo     ? { background: 'var(--accent)', color: '#020c08' } : {}),
+                  ...(!p.activo && !p.completado ? { opacity: 0.4 } : {}),
+                }}>
+                  {p.completado ? '✓' : p.num}
+                </div>
+                <div style={{ opacity: !p.activo && !p.completado ? 0.4 : 1 }}>
+                  <div style={styles.stepTitle}>{p.titulo}</div>
+                  <div style={styles.stepDesc}>{p.desc}</div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div style={styles.bloqFlecha}>↓</div>
-          <div style={styles.bloqPaso}>
-            <div style={{ ...styles.stepNum, opacity: 0.4 }}>2</div>
-            <div style={{ opacity: 0.4 }}>
-              <div style={styles.stepTitle}>Prueba biométrica</div>
-              <div style={styles.stepDesc}>90 segundos de eye-tracking con tu cámara</div>
-            </div>
-          </div>
+          ))}
         </div>
 
-        <button style={styles.startBtn} onClick={() => navigate('/cuestionario')}>
-          {esPrimera ? 'Ir al cuestionario →' : 'Actualizar cuestionario →'}
+        <button style={styles.startBtn} onClick={() => navigate(c.btnRuta)}>
+          {c.btnLabel}
         </button>
       </div>
     </div>
@@ -192,8 +241,8 @@ function PantallaBloqueo({ navigate, mensaje }) {
 }
 
 const STEPS = [
-  { title: 'Permiso de cámara',       desc: 'Aceptas el acceso a tu webcam estándar.' },
-  { title: 'Sesión de 90 segundos',   desc: 'El sistema captura tus métricas oculares en vivo.' },
+  { title: 'Permiso de cámara',        desc: 'Aceptas el acceso a tu webcam estándar.' },
+  { title: 'Sesión de 90 segundos',    desc: 'El sistema captura tus métricas oculares en vivo.' },
   { title: 'Clasificación automática', desc: 'XGBoost determina tu perfil: Visual o Verbal.' },
   { title: 'Resultados en Historial',  desc: 'Tu estilo cognitivo queda guardado para revisión.' },
 ]
@@ -205,13 +254,14 @@ const REQS = [
 ]
 
 const styles = {
-  container: { display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '720px', margin: '0 auto', width: '100%' },
+  container:  { display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '720px', margin: '0 auto', width: '100%' },
   tag: {
     display: 'inline-block', fontFamily: 'var(--mono)', fontSize: '11px',
     color: 'var(--accent)', background: 'var(--accent-dim)',
     border: '1px solid rgba(0,212,170,0.2)', borderRadius: '100px',
     padding: '4px 12px', letterSpacing: '0.08em',
   },
+  badgesRow: { display: 'flex', flexDirection: 'column', gap: '8px' },
   qBadge: {
     display: 'inline-flex', alignItems: 'center', gap: '8px',
     background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.25)',
@@ -225,22 +275,20 @@ const styles = {
   bloqIcon: {
     width: '72px', height: '72px', background: 'var(--accent-dim)',
     border: '1px solid rgba(0,212,170,0.2)', borderRadius: '20px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    marginBottom: '24px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px',
   },
   eyeGlyph: {
     width: '72px', height: '72px', background: 'var(--accent-dim)',
     border: '1px solid rgba(0,212,170,0.2)', borderRadius: '20px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    marginBottom: '24px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px',
   },
-  heroTitle: { fontSize: '22px', fontWeight: 600, marginBottom: '12px', letterSpacing: '-0.02em' },
-  heroDesc:  { color: 'var(--muted2)', lineHeight: 1.75, fontSize: '14px', marginBottom: '32px' },
-  bloqPasos: { display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' },
-  bloqPaso:  { display: 'flex', alignItems: 'flex-start', gap: '14px' },
-  bloqFlecha:{ fontSize: '18px', color: 'var(--muted)', paddingLeft: '7px' },
-  steps:     { display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '32px' },
-  step:      { display: 'flex', alignItems: 'flex-start', gap: '14px' },
+  heroTitle:  { fontSize: '22px', fontWeight: 600, marginBottom: '12px', letterSpacing: '-0.02em' },
+  heroDesc:   { color: 'var(--muted2)', lineHeight: 1.75, fontSize: '14px', marginBottom: '32px' },
+  bloqPasos:  { display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '28px' },
+  bloqPaso:   { display: 'flex', alignItems: 'flex-start', gap: '14px' },
+  bloqFlecha: { fontSize: '18px', color: 'var(--muted)', paddingLeft: '7px', marginBottom: '4px' },
+  steps:      { display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '32px' },
+  step:       { display: 'flex', alignItems: 'flex-start', gap: '14px' },
   stepNum: {
     width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
     background: 'var(--accent-dim)', border: '1px solid rgba(0,212,170,0.3)',
@@ -270,14 +318,12 @@ const styles = {
   },
   modal: {
     background: 'var(--surface)', border: '1px solid var(--border2)',
-    borderRadius: 'var(--radius-lg)', padding: '36px',
-    maxWidth: '440px', width: '90%',
+    borderRadius: 'var(--radius-lg)', padding: '36px', maxWidth: '440px', width: '90%',
   },
   modalIcon: {
     width: '56px', height: '56px', background: 'var(--accent-dim)',
     border: '1px solid rgba(0,212,170,0.2)', borderRadius: '14px',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    marginBottom: '20px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px',
   },
   modalTitle: { fontSize: '18px', fontWeight: 600, marginBottom: '12px' },
   modalDesc:  { fontSize: '13px', color: 'var(--muted2)', lineHeight: 1.7, marginBottom: '16px' },

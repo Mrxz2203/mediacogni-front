@@ -10,7 +10,8 @@ const PAGE_TITLES = {
   '/historial':       'Historial',
   '/cuestionario':            'Cuestionario F-S',       
   '/admin/usuarios':          'Panel de Administración', 
-  '/admin/usuarios/lista':    'Gestionar Usuarios',      
+  '/admin/usuarios/lista':    'Gestionar Usuarios',    
+  '/cuestionario-osivq': 'Cuestionario OSIVQ',  
 }
 
 export default function Layout() {

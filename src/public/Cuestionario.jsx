@@ -144,8 +144,8 @@ export default function Cuestionario() {
             </div>
           </div>
           <div style={styles.botonesWrap}>
-            <button style={styles.irSistemaBtn} onClick={() => navigate('/sistema')}>
-              Ir a la prueba biométrica →
+            <button style={styles.irSistemaBtn} onClick={() => navigate('/cuestionario-osivq')}>
+              Ir al cuestionario OSIVQ →
             </button>
             <button style={styles.rehacerBtn} onClick={iniciarDeNuevo}>
               Responder de nuevo
@@ -197,8 +197,8 @@ export default function Cuestionario() {
           </div>
 
           <div style={styles.botonesWrap}>
-            <button style={styles.irSistemaBtn} onClick={() => navigate('/sistema')}>
-              Ir a la prueba biométrica →
+            <button style={styles.irSistemaBtn} onClick={() => navigate('/cuestionario-osivq')}>
+              Ir al cuestionario OSIVQ →
             </button>
             <button style={styles.rehacerBtn} onClick={iniciarDeNuevo}>
               Responder de nuevo

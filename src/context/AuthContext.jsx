@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 
+
 const API = 'http://localhost:8000'
 const AuthContext = createContext(null)
 
@@ -12,6 +13,8 @@ export function AuthProvider({ children }) {
   // Estado del cuestionario: null = no completado, objeto = resultado
   const [cuestionarioCompletado, setCuestionarioCompletado] = useState(null)
 
+  const [osivqCompletado, setOsivqCompletado] = useState(null)
+
   // Bandera para mostrar aviso de "sesión expirada" tras redirigir al login
   const [sesionExpirada, setSesionExpirada] = useState(false)
 
@@ -23,6 +26,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('vcogni_user')
     setUser(null)
     setCuestionarioCompletado(null)
+    setOsivqCompletado(null)
   }
 
   // ── Helper central: hace fetch y detecta 401 en un solo lugar ──
@@ -46,6 +50,11 @@ export function AuthProvider({ children }) {
       fetchAuth(`${API}/cuestionario/me?token=${token}`)
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data) setCuestionarioCompletado(data) })
+        .catch(() => {})
+
+        fetchAuth(`${API}/cuestionario-osivq/me?token=${token}`)
+        .then(r=> r.ok ? r.json() : null)
+        .then(data => {if (data) setOsivqCompletado(data)})
         .catch(() => {})
     }
   }, [user])
@@ -76,16 +85,19 @@ export function AuthProvider({ children }) {
 
     // Cargar cuestionario al iniciar sesión
     try {
-      const qRes = await fetch(`${API}/cuestionario/me?token=${data.access_token}`)
+       const qRes = await fetch(`${API}/cuestionario/me?token=${data.access_token}`)
       if (qRes.ok) {
-        const qData = await qRes.json()
-        setCuestionarioCompletado(qData)
+        setCuestionarioCompletado(await qRes.json())
       }
-    } catch (_) {}
+      } catch(_) {} 
 
-    return data.rol
-  }
-
+      try {
+        const oRes = await fetch(`${API}/cuestionario-osivq/me?token=${data.access_token}`)
+        if (oRes.ok) setOsivqCompletado(await oRes.json())
+      }catch(_) {}
+      return data.rol
+    }
+    
   // Logout manual (botón "Cerrar sesión")
   const logout = () => {
     limpiarSesion()
@@ -133,6 +145,30 @@ export function AuthProvider({ children }) {
     return await res.json()
   }
 
+  const enviarOSIVQ = async (respuestas) => {
+    const t = localStorage.getItem('vcogni_token')
+    const res = await fetchAuth(`${API}/cuestionario-osivq?token=${t}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({respuestas}),
+    } )
+    if (!res.ok){
+      const err= await res.json()
+      throw new Error(err.detail || 'Error al enviar OSIVQ')
+    }
+    const data = await res.json()
+    setOsivqCompletado(data)
+    return data
+  }
+
+  const getHistorialOSIVQ = async () => {
+    const t = localStorage.getItem('vcogni_token')
+  const res = await fetchAuth(`${API}/cuestionario-osivq/historial?token=${t}`)
+  if (!res.ok) return []
+  return await res.json ()
+  }
+
+
   return (
     <AuthContext.Provider value={{
       user, token,
@@ -141,6 +177,8 @@ export function AuthProvider({ children }) {
       enviarCuestionario, cuestionarioCompletado,
       getHistorialCuestionarios,
       sesionExpirada, setSesionExpirada,
+      enviarOSIVQ, osivqCompletado,  
+      getHistorialOSIVQ,
     }}>
       {children}
     </AuthContext.Provider>

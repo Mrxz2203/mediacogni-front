@@ -5,7 +5,8 @@ import { useState } from 'react'
 const NAV_ESTUDIANTE = [
   { to: '/inicio',        label: 'Inicio',       icon: HomeIcon },
   { to: '/perfil',        label: 'Perfil',        icon: UserIcon },
-  { to: '/cuestionario',  label: 'Cuestionario',  icon: QuizIcon },
+  { to: '/cuestionario',  label: 'Cuestionario F-S',  icon: QuizIcon },
+  { to: '/cuestionario-osivq', label: 'Cuestionario OSIVQ',          icon: OsivqIcon },
   { to: '/sistema',       label: 'Sistema',       icon: EyeIcon },
   { to: '/historial',     label: 'Historial',     icon: ClockIcon },
 ]
@@ -113,7 +114,7 @@ function EyeIcon()   { return <svg width="18" height="18" viewBox="0 0 24 24" fi
 function ClockIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg> }
 function UsersIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> }
 function LogoutIcon(){ return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> }
-
+function OsivqIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> }
 const styles = {
   sidebar:      { width: 'var(--sidebar-w)', minHeight: '100vh', background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 },
   logo:         { display: 'flex', alignItems: 'center', gap: '12px', padding: '24px 20px' },
