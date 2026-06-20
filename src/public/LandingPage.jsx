@@ -35,10 +35,11 @@ export default function LandingPage() {
             Identifica el <span style={s.heroAccent}>estilo cognitivo</span> de tus estudiantes
           </h1>
           <p style={s.heroDesc}>
-            V-COGNI analiza el comportamiento visual mediante webcam estándar para clasificar
-            perfiles cognitivos de forma objetiva, no invasiva y con más del{' '}
-            <strong style={{ color: 'var(--accent)' }}>82% de exactitud</strong>.
-          </p>
+  V-COGNI combina dos cuestionarios validados científicamente (Felder-Silverman y OSIVQ)
+  con seguimiento ocular en tiempo real para clasificar perfiles cognitivos de forma
+  objetiva, no invasiva y con más del{' '}
+  <strong style={{ color: 'var(--accent)' }}>82% de exactitud</strong>.
+</p>
           <div style={s.heroBtns}>
             <button style={s.btnPrimary} onClick={() => navigate('/registro')}>
               Comenzar gratis
@@ -86,15 +87,14 @@ export default function LandingPage() {
 const STATS = [
   { val: '82%', label: 'Exactitud' },
   { val: '90s', label: 'Por sesión' },
-  { val: '2',   label: 'Perfiles cognitivos' },
+  { val: '3',   label: 'Métodos de evaluación' },  
 ]
 
-// Las imágenes se importan arriba y se referencian aquí
 const FEATURES = [
-  { img: ocularImg,   title: 'Seguimiento ocular',    desc: 'MediaPipe detecta landmarks faciales con precisión milimétrica en tiempo real usando tu webcam estándar.' },
-  { img: clasiImg,    title: 'Clasificación XGBoost', desc: 'Modelo entrenado que clasifica automáticamente el perfil cognitivo: Visual o Verbal con alta confianza.' },
-  { img: historialImg,title: 'Historial y evolución', desc: 'Revisa los resultados de cada sesión y compara la evolución del perfil cognitivo a lo largo del tiempo.' },
-  { img: protegerImg, title: 'No invasivo',           desc: 'Sin hardware especial, sin almacenamiento de video. Solo se procesan datos biométricos en tiempo real.' },
+  { img: ocularImg,    title: 'Cuestionarios F-S + OSIVQ', desc: 'Dos cuestionarios validados científicamente para evaluar tu perfil cognitivo antes de la prueba biométrica.' },
+  { img: clasiImg,     title: 'Clasificación XGBoost',     desc: 'Modelo entrenado que clasifica automáticamente el perfil cognitivo: Visual o Verbal con alta confianza.' },
+  { img: historialImg, title: 'Validación cruzada',        desc: 'Los 3 métodos se cruzan para confirmar, detectar discrepancias o descartar resultados poco confiables.' },
+  { img: protegerImg,  title: 'No invasivo',               desc: 'Sin hardware especial, sin almacenamiento de video. Solo se procesan datos biométricos en tiempo real.' },
 ]
 
 const s = {

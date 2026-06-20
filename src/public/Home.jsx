@@ -58,9 +58,9 @@ tiempo real de 90 segundos con tu cámara web estándar.
 }
 
 const CARDS = [
-  { img: ocularImg,     label: 'Cuestionarios',      desc: 'F-S + OSIVQ para evaluar tu perfil' },
-  { img: clasiImg,      label: 'Prueba Biométrica',  desc: 'XGBoost clasifica tu perfil: Visual o Verbal' },
-  { img: resultadosImg, label: 'Resultados',               desc: 'Revisa tu historial y evolución en el tiempo' },
+  { img: ocularImg,     label: 'Cuestionarios',     desc: 'Felder-Silverman (11 preguntas) + OSIVQ (30 preguntas) para evaluar tu perfil cognitivo' },
+  { img: clasiImg,      label: 'Prueba biométrica', desc: 'MediaPipe detecta tus movimientos oculares y XGBoost clasifica tu perfil: Visual o Verbal' },
+  { img: resultadosImg, label: 'Resultados',        desc: 'Validación cruzada de los 3 métodos y evolución de tu perfil en el tiempo' },
 ]
 
 function ArrowIcon() {
