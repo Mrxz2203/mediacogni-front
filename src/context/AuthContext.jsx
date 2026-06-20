@@ -29,6 +29,9 @@ export function AuthProvider({ children }) {
     setOsivqCompletado(null)
   }
 
+const limpiarCuestionarioTemp = () => setCuestionarioCompletado(null)
+const limpiarOsivqTemp        = () => setOsivqCompletado(null)
+
   // ── Helper central: hace fetch y detecta 401 en un solo lugar ──
   // Si el backend responde 401, se asume token vencido o inválido:
   // limpia la sesión, marca sesionExpirada y redirige a /login.
@@ -179,6 +182,8 @@ export function AuthProvider({ children }) {
       sesionExpirada, setSesionExpirada,
       enviarOSIVQ, osivqCompletado,  
       getHistorialOSIVQ,
+      limpiarCuestionarioTemp,
+limpiarOsivqTemp,
     }}>
       {children}
     </AuthContext.Provider>

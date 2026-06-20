@@ -78,7 +78,7 @@ const COLORES = {
 }
 
 export default function Cuestionario() {
-  const { enviarCuestionario, cuestionarioCompletado } = useAuth()
+  const { enviarCuestionario, cuestionarioCompletado, limpiarCuestionarioTemp } = useAuth()
   const navigate = useNavigate()
 
   const [respuestas,  setRespuestas]  = useState({})
@@ -116,6 +116,7 @@ export default function Cuestionario() {
     setResultado(null)
     setError(null)
     setRehaciendo(true)
+    limpiarCuestionarioTemp()
   }
 
   // Pantalla: ya completó y no está rehaciendo ni acaba de enviar
@@ -192,9 +193,9 @@ export default function Cuestionario() {
           </div>
 
           <div style={styles.nextStep}>
-            <span style={styles.nextStepNum}>→</span>
-            <span>Ahora puedes realizar la <strong>prueba biométrica</strong> de 90 segundos con la cámara.</span>
-          </div>
+  <span style={styles.nextStepNum}>→</span>
+  <span>Ahora puedes realizar el <strong>Cuestionario OSIVQ</strong>, el segundo paso del proceso.</span>
+</div>
 
           <div style={styles.botonesWrap}>
             <button style={styles.irSistemaBtn} onClick={() => navigate('/cuestionario-osivq')}>

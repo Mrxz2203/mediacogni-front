@@ -59,7 +59,7 @@ const COLORES = {
 }
 
 export default function CuestionarioOSIVQ() {
- const { enviarOSIVQ, osivqCompletado, cuestionarioCompletado } = useAuth()
+const { enviarOSIVQ, osivqCompletado, cuestionarioCompletado, limpiarOsivqTemp, limpiarCuestionarioTemp } = useAuth()
   const navigate = useNavigate()
 
   const [respuestas,  setRespuestas]  = useState({})
@@ -97,6 +97,8 @@ export default function CuestionarioOSIVQ() {
     setResultado(null)
     setError(null)
     setRehaciendo(true)
+     limpiarOsivqTemp() 
+       limpiarCuestionarioTemp() 
   }
 
 // ── Bloqueo: si no completó el F-S no puede acceder al OSIVQ ─────────────
