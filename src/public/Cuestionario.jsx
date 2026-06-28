@@ -87,6 +87,8 @@ export default function Cuestionario() {
   const [error,       setError]       = useState(null)
   const [rehaciendo,  setRehaciendo]  = useState(false)
 
+  const [showConfirm, setShowConfirm] = useState(false)
+
   const totalRespondidas = Object.keys(respuestas).length
   const progreso = Math.round((totalRespondidas / PREGUNTAS.length) * 100)
   const completo = totalRespondidas === PREGUNTAS.length
@@ -148,10 +150,25 @@ export default function Cuestionario() {
             <button style={styles.irSistemaBtn} onClick={() => navigate('/cuestionario-osivq')}>
               Ir al cuestionario OSIVQ →
             </button>
-            <button style={styles.rehacerBtn} onClick={iniciarDeNuevo}>
-              Responder de nuevo
-            </button>
+            <button style={styles.rehacerBtn} onClick={() => setShowConfirm(true)}>
+  Responder de nuevo
+</button>
           </div>
+          {/* Modal confirmación */}
+{showConfirm && (
+  <div style={styles.overlayConfirm}>
+    <div style={styles.modalConfirm}>
+      <h3 style={styles.modalTitle}>¿Responder de nuevo?</h3>
+      <p style={styles.modalDesc}>
+        Deberás completar el flujo completo desde el inicio: F-S → OSIVQ → Prueba biométrica.
+      </p>
+      <div style={styles.modalBtns}>
+        <button style={styles.modalCancel} onClick={() => setShowConfirm(false)}>Cancelar</button>
+        <button style={styles.modalOk} onClick={() => { setShowConfirm(false); iniciarDeNuevo() }}>Sí, responder de nuevo</button>
+      </div>
+    </div>
+  </div>
+)}
         </div>
       </div>
     )
@@ -201,10 +218,25 @@ export default function Cuestionario() {
             <button style={styles.irSistemaBtn} onClick={() => navigate('/cuestionario-osivq')}>
               Ir al cuestionario OSIVQ →
             </button>
-            <button style={styles.rehacerBtn} onClick={iniciarDeNuevo}>
-              Responder de nuevo
-            </button>
+            <button style={styles.rehacerBtn} onClick={() => setShowConfirm(true)}>
+  Responder de nuevo
+</button>
           </div>
+          {/* Modal confirmación */}
+{showConfirm && (
+  <div style={styles.overlayConfirm}>
+    <div style={styles.modalConfirm}>
+      <h3 style={styles.modalTitle}>¿Responder de nuevo?</h3>
+      <p style={styles.modalDesc}>
+        Deberás completar el flujo completo desde el inicio: F-S → OSIVQ → Prueba biométrica.
+      </p>
+      <div style={styles.modalBtns}>
+        <button style={styles.modalCancel} onClick={() => setShowConfirm(false)}>Cancelar</button>
+        <button style={styles.modalOk} onClick={() => { setShowConfirm(false); iniciarDeNuevo() }}>Sí, responder de nuevo</button>
+      </div>
+    </div>
+  </div>
+)}
         </div>
       </div>
     )
@@ -405,4 +437,11 @@ const styles = {
     border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px',
     fontFamily: 'var(--sans)', cursor: 'pointer',
   },
+  overlayConfirm: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 },
+modalConfirm:   { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-lg)', padding: '28px', maxWidth: '380px', width: '90%' },
+modalTitle:     { fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: 'var(--text)', margin: '0 0 8px' },
+modalDesc:      { fontSize: '13px', color: 'var(--muted2)', marginBottom: '20px', lineHeight: 1.6 },
+modalBtns:      { display: 'flex', gap: '10px' },
+modalCancel:    { flex: 1, padding: '9px', background: 'none', border: '1px solid var(--border2)', borderRadius: '8px', color: 'var(--muted2)', fontSize: '13px', fontFamily: 'var(--sans)', cursor: 'pointer' },
+modalOk:        { flex: 1, padding: '9px', background: 'var(--accent)', border: 'none', borderRadius: '8px', color: '#020c08', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--sans)', cursor: 'pointer' },
 }

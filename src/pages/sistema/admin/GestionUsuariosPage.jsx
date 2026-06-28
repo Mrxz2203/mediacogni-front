@@ -62,15 +62,17 @@ export default function GestionUsuariosPage() {
 
     setDetalle(prev => ({ ...prev, [u.id]: { loading: true } }))
 
-    const [sesRes, qRes] = await Promise.all([
-      fetch(`${API}/admin/usuarios/${u.id}/sesiones?token=${token}`),
-      fetch(`${API}/admin/usuarios/${u.id}/cuestionarios?token=${token}`),
-    ])
+   const [sesRes, qRes, oRes] = await Promise.all([
+  fetch(`${API}/admin/usuarios/${u.id}/sesiones?token=${token}`),
+  fetch(`${API}/admin/usuarios/${u.id}/cuestionarios?token=${token}`),
+  fetch(`${API}/admin/usuarios/${u.id}/cuestionarios-osivq?token=${token}`),
+])
 
-    const sesiones      = sesRes.ok ? await sesRes.json() : []
-    const cuestionarios = qRes.ok   ? await qRes.json()   : []
+const sesiones      = sesRes.ok ? await sesRes.json() : []
+const cuestionarios = qRes.ok   ? await qRes.json()   : []
+const osivqs        = oRes.ok   ? await oRes.json()   : []
 
-    setDetalle(prev => ({ ...prev, [u.id]: { sesiones, cuestionarios, loading: false } }))
+setDetalle(prev => ({ ...prev, [u.id]: { sesiones, cuestionarios, osivqs, loading: false } }))
   }
 
   const formatFecha = (iso) => {
@@ -240,7 +242,33 @@ export default function GestionUsuariosPage() {
                           <div style={styles.sinDatos}>Sin cuestionarios completados</div>
                         )}
                       </div>
-
+{/* Evolución del cuestionario OSIVQ */}
+<div style={styles.detalleSeccion}>
+  <div style={styles.detalleTitulo}>
+    📋 Evolución del cuestionario OSIVQ ({info?.osivqs?.length ?? 0})
+  </div>
+  {info?.osivqs?.length > 0 ? (
+    <div style={styles.sesionesLista}>
+      {info.osivqs.map((q, i) => {
+        const col = colorResultado(q.resultado)
+        return (
+          <div key={q.id} style={styles.sesionRow}>
+            <div style={styles.sesionNum}>#{info.osivqs.length - i}</div>
+            <div style={styles.sesionFecha}>{formatFecha(q.fecha)}</div>
+            <div style={{ ...styles.sesionBadge, color: col.c, background: col.bg, border: `1px solid ${col.bd}` }}>
+              {q.resultado}
+            </div>
+            <div style={styles.sesionConf}>
+              V:{q.puntaje_object} · Vb:{q.puntaje_verbal}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  ) : (
+    <div style={styles.sinDatos}>Sin cuestionarios OSIVQ completados</div>
+  )}
+</div>
                       {/* Sesiones biométricas con validación cruzada */}
                       <div style={styles.detalleSeccion}>
                         <div style={styles.detalleTitulo}>👁️ Pruebas biométricas ({info?.sesiones?.length ?? 0})</div>
